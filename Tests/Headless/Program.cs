@@ -30,7 +30,7 @@ static class Program
         using var evidence = System.Text.Json.JsonDocument.Parse(System.IO.File.ReadAllText("Docs/PS1_Arkenoid_Runtime_Measurements.json"));
         foreach (var trace in evidence.RootElement.GetProperty("motion_traces").EnumerateArray())
         {
-            var tuning = new ArkenoidTuning { countdownSeconds = 0 };
+            var tuning = ArkenoidTuning.CrashballReference(); tuning.countdownSeconds = 0;
             var roster = Roster(); roster[0].Character = CharacterId.Dingodile;
             var sim = new ArkenoidSimulation(tuning, ArkenoidRulesFactory.Create(ArkenoidVariant.BA, 15), roster);
             sim.Step(tuning.simulationTickSeconds);
@@ -40,7 +40,9 @@ static class Program
                 foreach (var originalX in segment.GetProperty("x_per_logic_tick").EnumerateArray())
                 {
                     sim.Step(tuning.simulationTickSeconds);
-                    Check(Math.Abs(sim.Hero(2).Lateral * 400 - originalX.GetInt32()) < 1.1f,
+                    int coordinate = originalX.GetInt32();
+                    float tolerance = coordinate == -1200 || coordinate == 1201 ? .025f : 1.1f;
+                    Check(Math.Abs(sim.Hero(2).Lateral * 400 - coordinate) < tolerance,
                         "PS1 motion trace mismatch: " + trace.GetProperty("name").GetString());
                 }
             }

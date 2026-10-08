@@ -42,12 +42,14 @@ with tempfile.TemporaryDirectory(prefix='arkenoid-unity-refs-') as temporary:
         response = directory/(output.stem+'.rsp')
         response.write_text('\n'.join(options))
         subprocess.run([str(dotnet_root/'dotnet'),str(csc),'-noconfig','@'+str(response)],check=True,cwd=project)
-    engine = [p for name,p in modules.items() if name.startswith('UnityEngine')]
+    # The archive also ships legacy monolithic reference facades. Mixing those
+    # definitions with CoreModule produces CS0433; Unity 6 uses modular APIs.
+    engine = [p for name,p in modules.items() if name.startswith('UnityEngine') and name != 'UnityEngine.dll']
     sources = sorted((project/'Assets/CrashBash/Scripts').rglob('*.cs'))
     compile_sources(runtime, sources, engine)
     print(f'PASS: {len(sources)} runtime C# files compiled against {len(engine)} genuine UnityEngine assemblies.')
     if args.editor:
-        editor = [p for name,p in modules.items() if name.startswith('UnityEditor')]
+        editor = [p for name,p in modules.items() if name.startswith('UnityEditor') and name != 'UnityEditor.dll']
         compile_sources(directory/'CrashBash.Editor.dll', (project/'Assets/CrashBash/Editor').glob('*.cs'), engine+editor+[runtime])
         print('PASS: editor C# assembly compiled against genuine UnityEditor references.')
     print('Scope: C# reference compilation only; Unity import/rendering/player build NOT performed.')

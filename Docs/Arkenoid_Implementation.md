@@ -93,6 +93,8 @@ then 72/76/80. The fitted explanation sets kick speed to old target +64,
 switches cruise target to 144, then applies the ordinary +4/-1 approach.
 This is a behavior reconstruction, not recovered `CalcArkInfluence` code.
 Passive-contact angles and exact original collision shape remain unmeasured.
+The current passive-contact cruise-target reset is also provisional: controlled
+confirmation of target 144 applies to kick, not every passive collision.
 
 Dingodile's stationary-ball probes fit a wave starting at radius 384, expanding
 by 192 per logic update, with an effective 24-unit hit padding. It first affects
@@ -127,7 +129,9 @@ non-scoring balls, dead-wall rebound, elimination, persistent match result,
 three-round win accumulation, restart, fast/moving swept contacts, gated repulse,
 hold/release, 31 launch-height samples, six kick speed probes, coarse/fine kick
 reach probes, wave/corner containment and seeded bot soaks for all four dispatches.
-Additional functional regressions now exercise all ten hero states, taunt movement
+The motion regression now selects the Crashball reference profile and checks the
+measured -1200/+1201 bounds within .025 original units. Additional functional
+regressions exercise all ten hero states, taunt movement
 lock/resume, earned repulse charge consumption and grabbed-ball cleanup on elimination.
 Those regressions check the provisional action bindings; they do not confirm PS1
 RedKick semantics, animation timings or pickup ownership. These are real C# simulation tests, not
@@ -158,8 +162,11 @@ changes or the in-memory recovery of the last stage. A separate CI workflow now
 downloads the official pinned Linux editor archive, extracts only genuine
 UnityEngine/UnityEditor managed references into runner temporary storage and
 compiles both runtime and editor C# sources. It records archive/assembly hashes
-there without committing or uploading third-party DLLs. Its first result is
-pending; it is still C# API validation, not Unity execution.
+there without committing or uploading third-party DLLs. The first full-archive run exposed a verifier reference-selection problem:
+monolithic facades duplicated types in the modular Unity APIs (CS0433). The
+verifier now excludes those facades, and another run is pending. The archive is
+downloaded in eight validated HTTP ranges when the CDN supports it. This remains
+C# API validation, not Unity execution.
 
 To repeat that check without an installed editor:
 

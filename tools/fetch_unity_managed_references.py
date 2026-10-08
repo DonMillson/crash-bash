@@ -6,6 +6,7 @@ Nothing is imported into the Unity project or redistributed by this tool.
 This supports C# API compilation, not editor execution or a player build.
 """
 import argparse
+import concurrent.futures
 import hashlib
 import json
 import pathlib
@@ -37,9 +38,44 @@ copied = {}
 with tempfile.TemporaryDirectory(prefix='unity-managed-fetch-') as temporary:
     archive = pathlib.Path(temporary)/'Unity.tar.xz'
     print('Downloading official Unity ' + version[1] + ' reference archive.', flush=True)
-    request = urllib.request.Request(url, headers={'User-Agent': 'CrashBash-Arkenoid-API-Check'})
-    with urllib.request.urlopen(request, timeout=60) as response, archive.open('wb') as target:
-        shutil.copyfileobj(response, target, length=8*1024*1024)
+    headers = {'User-Agent': 'CrashBash-Arkenoid-API-Check', 'Accept-Encoding': 'identity'}
+    # Unity's resumable CDN can serve independent ranges much faster than one
+    # throttled stream. Probe first; a server that ignores Range gets one download.
+    total = 0
+    probe = urllib.request.Request(url, headers={**headers, 'Range': 'bytes=0-0'})
+    with urllib.request.urlopen(probe, timeout=60) as response:
+        content_range = response.headers.get('Content-Range', '')
+        match = re.fullmatch(r'bytes 0-0/(\d+)', content_range)
+        if response.status == 206 and match and response.read(2) == bytes([0xFD]):
+            total = int(match[1])
+    if total:
+        count = 8
+        size = (total + count - 1)//count
+        def download_part(index):
+            start, end = index*size, min(total, (index+1)*size)-1
+            path = pathlib.Path(temporary)/f'archive-{index}.part'
+            request = urllib.request.Request(url, headers={**headers, 'Range': f'bytes={start}-{end}'})
+            with urllib.request.urlopen(request, timeout=60) as response:
+                expected = f'bytes {start}-{end}/{total}'
+                if response.status != 206 or response.headers.get('Content-Range') != expected:
+                    raise RuntimeError('CDN did not honor the requested archive range.')
+                with path.open('wb') as target:
+                    shutil.copyfileobj(response, target, length=8*1024*1024)
+            if path.stat().st_size != end-start+1:
+                raise RuntimeError('Incomplete archive range download.')
+            return path
+        with concurrent.futures.ThreadPoolExecutor(max_workers=count) as pool:
+            parts = list(pool.map(download_part, range(count)))
+        with archive.open('wb') as target:
+            for path in parts:
+                with path.open('rb') as source:
+                    shutil.copyfileobj(source, target, length=8*1024*1024)
+                path.unlink()
+        print(f'Downloaded {total} bytes in {count} verified ranges.', flush=True)
+    else:
+        request = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(request, timeout=60) as response, archive.open('wb') as target:
+            shutil.copyfileobj(response, target, length=8*1024*1024)
     archive_digest = hashlib.sha256()
     with archive.open('rb') as source:
         for block in iter(lambda: source.read(8*1024*1024), b''):
