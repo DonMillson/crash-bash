@@ -28,9 +28,13 @@ def extent(fp, lba: int, length: int) -> bytes:
     count = (length + PAYLOAD - 1) // PAYLOAD
     return b"".join(sector(fp, lba + n) for n in range(count))[:length]
 
-def directory(fp, lba: int, size: int, base: str = "", depth: int = 0):
+def directory(fp, lba: int, size: int, base: str = "", depth: int = 0, seen=None):
     if depth > 10:
-        return
+        raise ValueError("ISO9660 directory nesting exceeds safety limit")
+    seen = set() if seen is None else seen
+    if lba in seen:
+        raise ValueError(f"Cyclic ISO9660 directory extent at LBA {lba}")
+    seen = seen | {lba}
     data = extent(fp, lba, size)
     pos = 0
     while pos < len(data):
@@ -39,20 +43,23 @@ def directory(fp, lba: int, size: int, base: str = "", depth: int = 0):
             pos = ((pos // PAYLOAD) + 1) * PAYLOAD
             continue
         record = data[pos:pos+n]
-        if len(record) < 34:
-            break
+        if n < 34 or len(record) != n or (pos % PAYLOAD) + n > PAYLOAD:
+            raise ValueError(f"Malformed ISO9660 directory record at {base}:{pos}")
         location = int.from_bytes(record[2:6], "little")
         length = int.from_bytes(record[10:14], "little")
         flags = record[25]
         namelen = record[32]
-        name = record[33:33+namelen].decode("ascii", "replace")
+        identifier = record[33:33+namelen]
+        if len(identifier) != namelen:
+            raise ValueError("Truncated ISO9660 file identifier")
         pos += n
-        if name in ("\\x00", "\\x01"):
+        if identifier in (b"\x00", b"\x01"):
             continue
+        name = identifier.decode("ascii", "replace").split(";")[0]
         full = base + "/" + name
         yield {"path": full, "lba": location, "size": length, "directory": bool(flags & 2)}
         if flags & 2:
-            yield from directory(fp, location, length, full, depth + 1)
+            yield from directory(fp, location, length, full, depth + 1, seen)
 
 def main():
     ap = argparse.ArgumentParser()

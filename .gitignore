@@ -11,3 +11,12 @@
 *.sln
 *.user
 *.unitypackage
+
+# Private PS1 reference material must never be distributed with the remake.
+*.[bB][iI][nN]
+*.[cC][uU][eE]
+*.[iI][sS][oO]
+*.[dD][aA][tT]
+/ReferencePrivate/
+__pycache__/
+*.pyc

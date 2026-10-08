@@ -178,3 +178,31 @@ The visible player object must support explicit PS1-style animation/gameplay sta
 Idle -> Move -> Kick/RedKick/Grab -> Taunt/Win/Lose/Die/Dead.
 
 The four variants also need separate environment modules because the original engine contains N.Gin, seaweed and laser-wall systems alongside variant-specific bounds.
+
+## Reproducible evidence pass, 2026-10-08
+
+`tools/analyze_arkenoid.py` now generates `Docs/PS1_Arkenoid_Evidence.json`
+directly from the supplied BIN/CUE. The JSON contains offsets, identifiers and
+an archive hash, **no original graphical assets or original function bodies**.
+
+Verified: 91 declarations, ten set/update state pairs and sequential object IDs
+`0x1501` through `0x1509` (the `0x1500` value is the zero sentinel). Tutorial
+signals at `0x00E140xx`–`0x00E143xx` independently establish hold-to-attract,
+release-to-fire, a force field collected at a corner post, failing engines,
+N.Gin attacks and non-scoring challenge balls.
+
+Limits: the surviving header contains declarations, not Arkenoid implementations.
+It does **not** establish dimensions, velocities, frame timings, bot logic, the
+meaning of RedKick, or a one-to-one mapping of BA/SE/NG/PI to resource groups.
+In particular, assigning seaweed to SE or LaserWall to PI from their names alone
+is an unverified inference. No numeric gameplay setting is declared PS1-verified
+by this pass. The earlier reconstruction arrows describe implementation intent,
+not a recovered PS1 transition graph.
+
+The ISO inspector had escaped textual `\\x00`/`\\x01` instead of byte identifiers
+for the self/parent entries. It now skips them correctly, rejects cyclic and
+malformed directories, and normalizes ISO version suffixes. Three synthetic
+regression tests pass; the real disc produces nine entries without recursion.
+
+The literal `\\n` between two methods in `ArenaBall.cs` was also removed. This
+fixes an obvious C# syntax error; Unity compilation is not claimed by that fix.

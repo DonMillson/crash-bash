@@ -1,0 +1,449 @@
+{
+  "schemaVersion": 1,
+  "archive": {
+    "path": "/CRASHBSH/CRASHBSH.DAT",
+    "bytes": 73220096,
+    "sha256": "3a02b477ab48ae99010e1a9db3b0d591c79e800b43d10779945ca18ab788acb7",
+    "lba": 236
+  },
+  "header": {
+    "enumOffset": "0x045CE9F7",
+    "kind": "preprocessed declarations; no Arkenoid function bodies recovered"
+  },
+  "objectIds": {
+    "AST_Ball": "0x1501",
+    "AST_AR_PU": "0x1502",
+    "AST_ArkRepulse": "0x1503",
+    "AST_ArkFlash": "0x1504",
+    "AST_ArkDeadWall": "0x1505",
+    "AST_NGDeadWall": "0x1506",
+    "AST_N_Gin": "0x1507",
+    "AST_SeaWeed": "0x1508",
+    "AST_LaserWall": "0x1509"
+  },
+  "statePairs": [
+    "Idle",
+    "Move",
+    "Kick",
+    "RedKick",
+    "Grab",
+    "Taunt",
+    "Winner",
+    "Lose",
+    "Die",
+    "Dead"
+  ],
+  "functions": [
+    {
+      "name": "AR_SetUp",
+      "datOffset": "0x045CEBA7"
+    },
+    {
+      "name": "AR_PreInitLevel",
+      "datOffset": "0x045CEBB9"
+    },
+    {
+      "name": "AR_InitLevel",
+      "datOffset": "0x045CEBD3"
+    },
+    {
+      "name": "AR_RestartLevel",
+      "datOffset": "0x045CEBEA"
+    },
+    {
+      "name": "AR_UpdateLevel",
+      "datOffset": "0x045CEC04"
+    },
+    {
+      "name": "AR_Triggers",
+      "datOffset": "0x045CEC1D"
+    },
+    {
+      "name": "AR_EarliestTriggers",
+      "datOffset": "0x045CEC42"
+    },
+    {
+      "name": "AR_InitIcons",
+      "datOffset": "0x045CEC60"
+    },
+    {
+      "name": "AR_InitHero",
+      "datOffset": "0x045CEC77"
+    },
+    {
+      "name": "AR_InitShadow",
+      "datOffset": "0x045CEC99"
+    },
+    {
+      "name": "AR_UpdateShadow",
+      "datOffset": "0x045CECBD"
+    },
+    {
+      "name": "AR_PreMoveHero",
+      "datOffset": "0x045CECE3"
+    },
+    {
+      "name": "AR_PI_PreMoveHero",
+      "datOffset": "0x045CED08"
+    },
+    {
+      "name": "AR_MoveHero",
+      "datOffset": "0x045CED30"
+    },
+    {
+      "name": "AR_PI_MoveHero",
+      "datOffset": "0x045CED59"
+    },
+    {
+      "name": "HeroChooseARScoreWinner",
+      "datOffset": "0x045CED82"
+    },
+    {
+      "name": "Ark_HeroBot",
+      "datOffset": "0x045CEDC4"
+    },
+    {
+      "name": "DangerBalls",
+      "datOffset": "0x045CEDE6"
+    },
+    {
+      "name": "AR_KeepInBounds",
+      "datOffset": "0x045CEE0C"
+    },
+    {
+      "name": "AR_PI_KeepInBounds",
+      "datOffset": "0x045CEE30"
+    },
+    {
+      "name": "AR_BA_BounceOnBounds",
+      "datOffset": "0x045CEE57"
+    },
+    {
+      "name": "AR_SE_BounceOnBounds",
+      "datOffset": "0x045CEE90"
+    },
+    {
+      "name": "AR_PI_BounceOnBounds",
+      "datOffset": "0x045CEEC9"
+    },
+    {
+      "name": "AR_BA_TestOutOfBounds",
+      "datOffset": "0x045CEF02"
+    },
+    {
+      "name": "AR_SE_TestOutOfBounds",
+      "datOffset": "0x045CEF3D"
+    },
+    {
+      "name": "AR_NG_TestOutOfBounds",
+      "datOffset": "0x045CEF78"
+    },
+    {
+      "name": "AR_PI_TestOutOfBounds",
+      "datOffset": "0x045CEFB3"
+    },
+    {
+      "name": "AR_BA_TestLaunchBounds",
+      "datOffset": "0x045CEFEE"
+    },
+    {
+      "name": "AR_PI_TestLaunchBounds",
+      "datOffset": "0x045CF024"
+    },
+    {
+      "name": "GetIntersect",
+      "datOffset": "0x045CF05A"
+    },
+    {
+      "name": "TestArkenoidStop",
+      "datOffset": "0x045CF093"
+    },
+    {
+      "name": "TestForMove",
+      "datOffset": "0x045CF0C3"
+    },
+    {
+      "name": "SetArkHeroIdle",
+      "datOffset": "0x045CF0F0"
+    },
+    {
+      "name": "ArkHeroIdle",
+      "datOffset": "0x045CF11C"
+    },
+    {
+      "name": "SetArkHeroMove",
+      "datOffset": "0x045CF145"
+    },
+    {
+      "name": "ArkHeroMove",
+      "datOffset": "0x045CF171"
+    },
+    {
+      "name": "SetArkHeroKick",
+      "datOffset": "0x045CF19C"
+    },
+    {
+      "name": "ArkHeroKick",
+      "datOffset": "0x045CF1C9"
+    },
+    {
+      "name": "SetArkHeroRedKick",
+      "datOffset": "0x045CF1F2"
+    },
+    {
+      "name": "ArkHeroRedKick",
+      "datOffset": "0x045CF222"
+    },
+    {
+      "name": "SetArkHeroGrab",
+      "datOffset": "0x045CF24E"
+    },
+    {
+      "name": "ArkHeroGrab",
+      "datOffset": "0x045CF274"
+    },
+    {
+      "name": "SetArkHeroTaunt",
+      "datOffset": "0x045CF299"
+    },
+    {
+      "name": "ArkHeroTaunt",
+      "datOffset": "0x045CF2BF"
+    },
+    {
+      "name": "SetArkHeroWinner",
+      "datOffset": "0x045CF2E4"
+    },
+    {
+      "name": "ArkHeroWinner",
+      "datOffset": "0x045CF30C"
+    },
+    {
+      "name": "SetArkHeroLose",
+      "datOffset": "0x045CF331"
+    },
+    {
+      "name": "ArkHeroLose",
+      "datOffset": "0x045CF357"
+    },
+    {
+      "name": "SetArkHeroDie",
+      "datOffset": "0x045CF37C"
+    },
+    {
+      "name": "ArkHeroDie",
+      "datOffset": "0x045CF3A1"
+    },
+    {
+      "name": "SetArkHeroDead",
+      "datOffset": "0x045CF3C3"
+    },
+    {
+      "name": "ArkHeroDead",
+      "datOffset": "0x045CF3E9"
+    },
+    {
+      "name": "PickArkPlayer",
+      "datOffset": "0x045CF40E"
+    },
+    {
+      "name": "FinishArkLevel",
+      "datOffset": "0x045CF439"
+    },
+    {
+      "name": "CreateBall",
+      "datOffset": "0x045CF453"
+    },
+    {
+      "name": "InitBall",
+      "datOffset": "0x045CF46B"
+    },
+    {
+      "name": "PlotBall",
+      "datOffset": "0x045CF481"
+    },
+    {
+      "name": "CalcArkInfluence",
+      "datOffset": "0x045CF497"
+    },
+    {
+      "name": "FreeGrabbedObject",
+      "datOffset": "0x045CF4BB"
+    },
+    {
+      "name": "AlignGrabBall",
+      "datOffset": "0x045CF4E9"
+    },
+    {
+      "name": "Init_N_Gin",
+      "datOffset": "0x045CF524"
+    },
+    {
+      "name": "Plot_N_Gin",
+      "datOffset": "0x045CF53C"
+    },
+    {
+      "name": "InitARKfloor",
+      "datOffset": "0x045CF556"
+    },
+    {
+      "name": "UpdateArkFloor",
+      "datOffset": "0x045CF56C"
+    },
+    {
+      "name": "ArkCrateMaster",
+      "datOffset": "0x045CF586"
+    },
+    {
+      "name": "Init_seaweed",
+      "datOffset": "0x045CF5A0"
+    },
+    {
+      "name": "Plot_seaweed",
+      "datOffset": "0x045CF5BA"
+    },
+    {
+      "name": "Init_ArkCameraFlash",
+      "datOffset": "0x045CF5D6"
+    },
+    {
+      "name": "Plot_ArkCameraFlash",
+      "datOffset": "0x045CF5F7"
+    },
+    {
+      "name": "Init_ArkDeadWall",
+      "datOffset": "0x045CF61A"
+    },
+    {
+      "name": "Init_NGArkDeadWall",
+      "datOffset": "0x045CF638"
+    },
+    {
+      "name": "Plot_ArkDeadWall",
+      "datOffset": "0x045CF658"
+    },
+    {
+      "name": "SetCornerFailure",
+      "datOffset": "0x045CF678"
+    },
+    {
+      "name": "HandleCornerFailure",
+      "datOffset": "0x045CF6A5"
+    },
+    {
+      "name": "GetArkContour",
+      "datOffset": "0x045CF6C4"
+    },
+    {
+      "name": "GetArkPIContour",
+      "datOffset": "0x045CF6EC"
+    },
+    {
+      "name": "Create_ArkPickup",
+      "datOffset": "0x045CF718"
+    },
+    {
+      "name": "Plot_Ark_Pickup",
+      "datOffset": "0x045CF732"
+    },
+    {
+      "name": "Init_ArkLaserWall",
+      "datOffset": "0x045CF751"
+    },
+    {
+      "name": "Plot_ArkLaserWall",
+      "datOffset": "0x045CF770"
+    },
+    {
+      "name": "Init_RepulseRing",
+      "datOffset": "0x045CF791"
+    },
+    {
+      "name": "Plot_RepulseRing",
+      "datOffset": "0x045CF7AF"
+    },
+    {
+      "name": "Init_MagnaRing",
+      "datOffset": "0x045CF7CD"
+    },
+    {
+      "name": "Plot_MagnaRing",
+      "datOffset": "0x045CF7E9"
+    },
+    {
+      "name": "LineToCircleTest",
+      "datOffset": "0x045CF807"
+    },
+    {
+      "name": "ArkHero2ObjectCollision",
+      "datOffset": "0x045CF83E"
+    },
+    {
+      "name": "ArkHeroRad2ObjectCollision",
+      "datOffset": "0x045CF86C"
+    },
+    {
+      "name": "ArkHeroRad2ObjectRepel",
+      "datOffset": "0x045CF8B0"
+    },
+    {
+      "name": "ArkHeroRad2ObjectAttract",
+      "datOffset": "0x045CF8E9"
+    },
+    {
+      "name": "TestArkObjectObstacles",
+      "datOffset": "0x045CF924"
+    },
+    {
+      "name": "TestArkObject2Hero",
+      "datOffset": "0x045CF95A"
+    }
+  ],
+  "resourceGroups": [
+    "file_group_BALLS",
+    "file_group_BEACHBALL",
+    "file_group_NGINBALL",
+    "file_group_SKYBALL"
+  ],
+  "tutorialSignals": {
+    "goalDeflectionAndLastSurvivor": [
+      "0x00E14010",
+      "0x00E14178",
+      "0x00E14268"
+    ],
+    "holdForShipSpeed": [
+      "0x00E140AC"
+    ],
+    "extraKick": [
+      "0x00E140DC"
+    ],
+    "holdAttract": [
+      "0x00E14128"
+    ],
+    "releaseToFire": [
+      "0x00E14148"
+    ],
+    "nginAttack": [
+      "0x00E141B3"
+    ],
+    "forceFieldFromCornerPost": [
+      "0x00E14208"
+    ],
+    "failingEngines": [
+      "0x00E142A3"
+    ],
+    "challengeBallsDoNotScore": [
+      "0x00E143DD"
+    ]
+  },
+  "verifiedNumericGameplayValues": {},
+  "unresolved": [
+    "BA/SE/NG/PI to level/resource mapping",
+    "bounds and movement units",
+    "launch cadence and speed",
+    "kick/RedKick semantics and cooldowns",
+    "bot decision logic",
+    "variant ownership of special objects",
+    "animation timing and geometry records"
+  ]
+}
