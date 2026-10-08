@@ -30,6 +30,7 @@ namespace CrashBashRemake
         public float Lateral { get; internal set; }
         public float PreviousLateral { get; internal set; }
         public float Velocity { get; internal set; }
+        internal float MotorVelocity;
         public ArkenoidHeroState State { get; internal set; }
         public float StateTime { get; internal set; }
         public bool IsEliminated => Lives <= 0;
@@ -43,6 +44,7 @@ namespace CrashBashRemake
     {
         public int Id { get; internal set; }
         public ArkVector Position { get; internal set; }
+        public ArkVector PreviousPosition { get; internal set; }
         public ArkVector Velocity { get; internal set; }
         public int GrabOwnerSlot { get; internal set; } = -1;
         public int LastTouchSlot { get; internal set; } = -1;

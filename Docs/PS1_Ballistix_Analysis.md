@@ -206,3 +206,26 @@ regression tests pass; the real disc produces nine entries without recursion.
 
 The literal `\\n` between two methods in `ArenaBall.cs` was also removed. This
 fixes an obvious C# syntax error; Unity compilation is not claimed by that fix.
+
+## Runtime reference measurements, 2026-10-08
+
+Static analysis is now complemented by running the supplied image locally with
+PCSX-ReARMed (interpreter, HLE BIOS). No BIOS, ROM, savestate, RAM dump, original
+audio, screenshot or original model has been committed. The new
+`PS1_Arkenoid_Runtime_Measurements.json` contains only numeric observations,
+sampling provenance and unresolved questions.
+
+Verified in the running Crashball VS reference: 15 starting points, default
+three-cup match option, D-pad movement, held L1/R1 sprint and Square kick. P1
+Dingodile motion changes every two 60Hz video callbacks: 30 logic updates/s.
+Normal displacement ramps 34/68/102/104 original units; sprint ramps 56/112/160.
+Release decelerates by 18 units per update. Four defender lines are at +/-2176;
+Dingodile's observed X limits are -1200 and +1201. These are behavior samples,
+not recovered function bodies, and other character stats remain unmeasured.
+
+The Unity simulation now uses the measured rhythm and Dingodile motion override,
+with meaningful regression comparisons against the numeric PS1 traces. A chosen
+scale of 400 PS1 coordinate units per Unity unit keeps rendering independent.
+Original contour, goal aperture, ball parameters, action windows, RedKick meaning
+and variant/resource mapping remain open; the implementation labels those values
+as provisional. HLE observations still need an original-hardware cross-check.

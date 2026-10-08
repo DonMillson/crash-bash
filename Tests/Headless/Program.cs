@@ -23,8 +23,47 @@ static class Program
         return sim;
     }
     static void Step(ArkenoidSimulation sim, int count) { for (int i = 0; i < count; i++) sim.Step(.02f); }
+    static void MeasuredMotion()
+    {
+        // Numeric observations from the actual user-supplied PS1 image, not values
+        // generated from the implementation under test. Only Dingodile is measured.
+        using var evidence = System.Text.Json.JsonDocument.Parse(System.IO.File.ReadAllText("Docs/PS1_Arkenoid_Runtime_Measurements.json"));
+        foreach (var trace in evidence.RootElement.GetProperty("motion_traces").EnumerateArray())
+        {
+            var tuning = new ArkenoidTuning { countdownSeconds = 0 };
+            var roster = Roster(); roster[0].Character = CharacterId.Dingodile;
+            var sim = new ArkenoidSimulation(tuning, ArkenoidRulesFactory.Create(ArkenoidVariant.BA, 15), roster);
+            sim.Step(tuning.simulationTickSeconds);
+            foreach (var segment in trace.GetProperty("segments").EnumerateArray())
+            {
+                sim.SetInput(2, new ArkInput { Axis = segment.GetProperty("axis").GetSingle(), Boost = segment.GetProperty("sprint").GetBoolean() });
+                foreach (var originalX in segment.GetProperty("x_per_logic_tick").EnumerateArray())
+                {
+                    sim.Step(tuning.simulationTickSeconds);
+                    Check(Math.Abs(sim.Hero(2).Lateral * 400 - originalX.GetInt32()) < 1.1f,
+                        "PS1 motion trace mismatch: " + trace.GetProperty("name").GetString());
+                }
+            }
+        }
+        var clock = Start(); int before = clock.TickNumber;
+        clock.SetInput(2, new ArkInput { KickPressed = true }); clock.Step(.01f);
+        Check(clock.TickNumber == before, "sub-tick advanced original simulation clock");
+        clock.SetInput(2, new ArkInput()); clock.Step(.024f);
+        Check(clock.Hero(2).State == ArkenoidHeroState.Kick, "button edge was lost between 50Hz host and 30Hz simulation");
+        var schedule = Start(new ArkenoidTuning { kickCooldown = 0 });
+        schedule.SetInput(2, new ArkInput { KickPressed = true }); schedule.Step(.2f);
+        int kicks = 0; foreach (ArkEvent ev in schedule.Events) if(ev.Kind == ArkEventKind.Kick && ev.SlotId == 2) kicks++;
+        Check(kicks == 1, "button edge executed more than once in accumulated ticks");
+        var a = Start(); var b = Start();
+        a.SetInput(2, new ArkInput { Axis = 1 }); b.SetInput(2, new ArkInput { Axis = 1 });
+        for(int i=0;i<20;i++)a.Step(.01f);
+        for(int i=0;i<6;i++)b.Step(b.Tuning.simulationTickSeconds);
+        Check(a.TickNumber == b.TickNumber && Math.Abs(a.Hero(2).Lateral-b.Hero(2).Lateral)<.0001f,
+            "movement depended on host update frequency");
+    }
     static void Main(string[] args)
     {
+        MeasuredMotion();
         foreach (ArkCraftPart part in ArkenoidCraftRecipe.Create())
         {
             double volume = 0;
@@ -79,16 +118,16 @@ static class Program
         var movingContact = sim.AddBall(new ArkVector(0, -3), new ArkVector(0, -16));
         sim.SetInput(2, new ArkInput { Axis = 1 }); sim.Step(.2f);
         Check(movingContact.Active && movingContact.Velocity.Y > 0, "sweep used defender's end position instead of movement across tick");
-        sim.SetInput(2, new ArkInput { RepulsePressed = true }); sim.Step(.02f);
+        sim.SetInput(2, new ArkInput { RepulsePressed = true }); sim.Step(.04f);
         Check(sim.Hero(2).State != ArkenoidHeroState.RedKick, "unlimited unearned repulse was enabled");
 
         sim = Start(new ArkenoidTuning { allowAttractForCalibration = true });
         var captured = sim.AddBall(new ArkVector(0, -4.5f), new ArkVector(0, -.1f));
-        sim.SetInput(2, new ArkInput { AttractHeld = true }); sim.Step(.02f);
+        sim.SetInput(2, new ArkInput { AttractHeld = true }); sim.Step(.04f);
         Check(captured.GrabOwnerSlot == 2 && sim.Hero(2).State == ArkenoidHeroState.Grab, "attract did not capture");
         Step(sim, 100);
         Check(captured.GrabOwnerSlot == 2 && captured.Velocity.LengthSquared == 0, "grab auto-released or changed velocity");
-        sim.SetInput(2, new ArkInput()); sim.Step(.02f);
+        sim.SetInput(2, new ArkInput()); sim.Step(.04f);
         Check(captured.GrabOwnerSlot == -1 && captured.Velocity.Y > 0 && sim.Hero(2).State == ArkenoidHeroState.Kick, "hold/release failed");
 
         foreach (ArkenoidVariant variant in Enum.GetValues(typeof(ArkenoidVariant)))
@@ -102,6 +141,6 @@ static class Program
                 Check(sim.Balls.Count <= 5, "ball population exceeded cap");
             }
         }
-        Console.WriteLine($"PASS: {assertions} assertions; identity, goals, death walls, reset, swept contacts, grab, four variant dispatches, seeded bot soak.");
+        Console.WriteLine($"PASS: {assertions} assertions; measured PS1 Dingodile traces, 30Hz input/clock, identity, goals, death walls, reset, swept contacts, grab, four variant dispatches, seeded bot soak.");
     }
 }

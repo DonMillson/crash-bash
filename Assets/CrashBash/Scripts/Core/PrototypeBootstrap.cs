@@ -56,7 +56,7 @@ namespace CrashBashRemake
             var g=new GameObject("Ball "+model.Id);g.transform.SetParent(playRoot,false);
             var view=g.AddComponent<ArenaBall>();
             var visual=ArkenoidBallVisual.Build(g.transform,simulation.Tuning.ballRadius,resources);
-            view.Configure(simulation,model,visual);return view;
+            view.Configure(simulation,model,visual,manager);return view;
         }
         void BuildCameraAndLight(ArkenoidTuning tuning)
         {

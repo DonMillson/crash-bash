@@ -11,6 +11,12 @@ namespace CrashBashRemake
         public ArenaBall ball;
         public ArkenoidSimulation Simulation { get; private set; }
         public bool Paused { get; private set; }
+        public bool MenuOpen { get; private set; }
+        bool pausedBeforeMenu;
+        int menuChangedFrame = -1;
+        float presentationTime;
+        public float PresentationAlpha => Simulation == null ? 1 : Paused ? 1 : Mathf.Clamp01(
+            Simulation.InterpolationAlpha + (Time.time - presentationTime) / Simulation.Tuning.simulationTickSeconds);
         public event Action<ArkEvent> GameplayEvent;
         readonly Dictionary<int, ArenaBall> views = new Dictionary<int, ArenaBall>();
         Func<ArkBallModel, ArenaBall> ballFactory;
@@ -22,11 +28,12 @@ namespace CrashBashRemake
         {
             slots.Clear(); slots.AddRange(configuredSlots);
             Simulation = simulation; ballFactory = createBall; environment = arenaEnvironment;
+            presentationTime = Time.time;
             foreach (PlayerSlot slot in slots)
             {
                 if (!slot.hero && slot.paddle) slot.hero = slot.paddle.GetComponent<ArkenoidHeroController>();
                 if (!slot.hero) throw new InvalidOperationException("Missing Arkenoid defender for slot " + slot.slotId);
-                slot.hero.Configure(simulation, simulation.Hero(slot.slotId), slot.inputIndex);
+                slot.hero.Configure(simulation, simulation.Hero(slot.slotId), slot.inputIndex, this);
             }
             environment.Configure(simulation); environment.Build();
             SyncViews(0);
@@ -42,6 +49,7 @@ namespace CrashBashRemake
             if (Simulation == null || Paused) return;
             foreach (PlayerSlot slot in slots) slot.hero.SubmitInput();
             Simulation.Step(Time.fixedDeltaTime);
+            presentationTime = Time.time;
             SyncViews(Time.fixedDeltaTime);
             environment.TickEnvironment(Time.fixedDeltaTime);
             foreach (ArkEvent ev in Simulation.Events) GameplayEvent?.Invoke(ev);
@@ -67,7 +75,15 @@ namespace CrashBashRemake
         public void SetPaused(bool value)
         {
             Paused = value;
+            if (value) Simulation?.ClearInputs();
             foreach (PlayerSlot slot in slots) slot.hero.AllowInput(!value);
+        }
+        public void SetMenuOpen(bool value)
+        {
+            if (value == MenuOpen) return;
+            MenuOpen = value; menuChangedFrame = Time.frameCount;
+            if (value) { pausedBeforeMenu = Paused; SetPaused(true); }
+            else SetPaused(pausedBeforeMenu);
         }
         public void RestartMatch()
         {
@@ -78,7 +94,7 @@ namespace CrashBashRemake
         }
         void Update()
         {
-            if (Simulation == null) return;
+            if (Simulation == null || MenuOpen || menuChangedFrame == Time.frameCount) return;
             if (Input.GetKeyDown(KeyCode.R)) RestartMatch();
             if (Input.GetKeyDown(KeyCode.Escape)) SetPaused(!Paused);
         }

@@ -80,7 +80,7 @@ namespace CrashBashRemake
             if (!hero || hero.Model == null) return;
             var model = hero.Model;
             float breath = Mathf.Sin(Time.time*3.1f)*.006f;
-            float lean = Mathf.Clamp(model.Velocity/hero.Simulation.Tuning.moveSpeed,-1,1)*-8;
+            float lean = Mathf.Clamp(model.Velocity/hero.Simulation.Tuning.MotionFor(model.Character).speed,-1,1)*-8;
             float pitch = 0, armRaise = 0, nod = 0;
             switch (model.State)
             {

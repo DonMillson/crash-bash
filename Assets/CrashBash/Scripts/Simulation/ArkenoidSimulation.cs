@@ -5,7 +5,8 @@ namespace CrashBashRemake
 {
     /// <summary>
     /// Shared Arkenoid gameplay. Unity supplies inputs and renders models; it does
-    /// not run a second PhysX ruleset. All numerical behavior remains provisional.
+    /// not run a second PhysX ruleset. A 30Hz tick and scoped Dingodile motion are
+    /// measured; other numerical behavior remains provisional.
     /// </summary>
     public sealed class ArkenoidSimulation
     {
@@ -16,6 +17,7 @@ namespace CrashBashRemake
         Random random;
         int nextBallId, nextCorner;
         float spawnTime, warningTime;
+        double accumulatedSeconds;
         public readonly ArkenoidTuning Tuning;
         public readonly ArkenoidArenaGeometry Geometry;
         public readonly IArkenoidRules Rules;
@@ -29,6 +31,8 @@ namespace CrashBashRemake
         public int MatchWinnerSlot { get; private set; } = -1;
         public int LaunchWarningCorner { get; private set; } = -1;
         public int RoundNumber { get; private set; }
+        public int TickNumber { get; private set; }
+        public float InterpolationAlpha => (float)(accumulatedSeconds / Tuning.simulationTickSeconds);
 
         public ArkenoidSimulation(ArkenoidTuning tuning, IArkenoidRules rules, IEnumerable<ArkPlayerSetup> players)
         {
@@ -55,13 +59,25 @@ namespace CrashBashRemake
         public void SetInput(int slot, ArkInput input)
         {
             ArkHeroModel hero = Hero(slot);
-            if (hero != null) { input.Axis = ArkMath.Clamp(input.Axis, -1, 1); hero.Input = input; }
+            if (!ArkMath.Finite(input.Axis)) throw new ArgumentException("Input axis must be finite.");
+            if (hero != null)
+            {
+                input.Axis = ArkMath.Clamp(input.Axis, -1, 1);
+                // Host FixedUpdate can run more frequently than the original 30Hz tick.
+                // Preserve button edges until a simulation tick actually consumes them.
+                input.KickPressed |= hero.Input.KickPressed;
+                input.RepulsePressed |= hero.Input.RepulsePressed;
+                input.TauntPressed |= hero.Input.TauntPressed;
+                hero.Input = input;
+            }
         }
+        public void ClearInputs() { foreach (ArkHeroModel hero in heroes) hero.Input = new ArkInput(); }
         public void ResetMatch()
         {
             random = new Random(Tuning.seed);
             nextCorner = random.Next(4);
-            events.Clear(); RoundNumber = 0; MatchWinnerSlot = -1;
+            events.Clear(); RoundNumber = 0; MatchWinnerSlot = -1; ElapsedTime = 0;
+            accumulatedSeconds = 0; TickNumber = 0;
             foreach (ArkHeroModel hero in heroes) hero.Wins = 0;
             RestartRound();
         }
@@ -72,10 +88,10 @@ namespace CrashBashRemake
             foreach (ArkHeroModel hero in heroes)
             {
                 hero.Lives = Rules.StartingScore;
-                hero.Lateral = hero.PreviousLateral = hero.Velocity = 0;
+                hero.Lateral = hero.PreviousLateral = hero.Velocity = hero.MotorVelocity = 0;
                 hero.ActionCooldown = hero.ActionTime = hero.BotThinkTime = hero.BotTarget = 0;
                 hero.RepulseCharges = 0; hero.GrabbedBallId = -1; hero.Input = new ArkInput();
-                SetState(hero, ArkenoidHeroState.Idle);
+                hero.State = ArkenoidHeroState.Idle; hero.StateTime = 0;
             }
             Array.Clear(pickupCooldown, 0, pickupCooldown.Length);
             Phase = ArkenoidMatchPhase.Countdown; PhaseTime = Tuning.countdownSeconds;
@@ -87,7 +103,17 @@ namespace CrashBashRemake
         {
             if (!ArkMath.Finite(seconds) || seconds <= 0 || seconds > .25f)
                 throw new ArgumentOutOfRangeException(nameof(seconds), "Use a positive fixed step of at most .25 seconds.");
-            events.Clear(); ElapsedTime += seconds;
+            events.Clear(); accumulatedSeconds += seconds;
+            double tick = Tuning.simulationTickSeconds;
+            while (accumulatedSeconds + .0000001 >= tick)
+            {
+                accumulatedSeconds = Math.Max(0, accumulatedSeconds - tick);
+                Tick(Tuning.simulationTickSeconds);
+            }
+        }
+        void Tick(float seconds)
+        {
+            TickNumber++; ElapsedTime += seconds;
             UpdatePresentationStates(seconds);
             if (Phase != ArkenoidMatchPhase.Playing)
             {
@@ -103,6 +129,7 @@ namespace CrashBashRemake
                 return;
             }
 
+            foreach (ArkBallModel ball in balls) ball.PreviousPosition = ball.Position;
             foreach (ArkHeroModel hero in heroes) MoveHero(hero, seconds);
             foreach (ArkHeroModel hero in heroes) HandleActions(hero, seconds);
             for (int i = 0; i < balls.Count && Phase == ArkenoidMatchPhase.Playing; i++) UpdateBall(balls[i], seconds);
@@ -137,13 +164,18 @@ namespace CrashBashRemake
         void MoveHero(ArkHeroModel hero, float dt)
         {
             hero.PreviousLateral = hero.Lateral;
-            if (hero.IsEliminated) { hero.Velocity = 0; return; }
+            if (hero.IsEliminated) { hero.Velocity = hero.MotorVelocity = 0; return; }
             if (!hero.Human) hero.Input = ThinkBot(hero, dt);
             float axis = hero.Input.Axis;
             if (hero.GrabbedBallId >= 0 || (hero.State == ArkenoidHeroState.Taunt && hero.ActionTime > 0)) axis = 0;
-            float desired = hero.Lateral + axis * Tuning.moveSpeed * (hero.Input.Boost ? Tuning.boostMultiplier : 1) * dt;
+            ArkMotionSettings motion = Tuning.MotionFor(hero.Character);
+            float targetSpeed = axis * (hero.Input.Boost ? motion.sprintSpeed : motion.speed);
+            float ramp = axis == 0 ? motion.deceleration : hero.Input.Boost ? motion.sprintAcceleration : motion.acceleration;
+            hero.MotorVelocity = ArkMath.MoveTowards(hero.MotorVelocity, targetSpeed, ramp * dt);
+            float desired = hero.Lateral + hero.MotorVelocity * dt;
             hero.Lateral = Rules.ClampHero(desired, Geometry);
             hero.Velocity = (hero.Lateral - hero.PreviousLateral) / dt;
+            if (hero.Lateral != desired) hero.MotorVelocity = 0;
             if (hero.ActionTime <= 0 && hero.GrabbedBallId < 0)
                 SetState(hero, Math.Abs(hero.Velocity) > .05f ? ArkenoidHeroState.Move : ArkenoidHeroState.Idle);
             if (Tuning.allowCornerPickupsForCalibration)
@@ -185,7 +217,7 @@ namespace CrashBashRemake
                     if (pull.Length < Tuning.ballRadius + .16f)
                     {
                         ball.GrabOwnerSlot = hero.SlotId; ball.LastTouchSlot = hero.SlotId;
-                        hero.GrabbedBallId = ball.Id; ball.Velocity = new ArkVector(); ball.Position = anchor;
+                        hero.GrabbedBallId = ball.Id; ball.Velocity = new ArkVector(); ball.Position = ball.PreviousPosition = anchor;
                         events.Add(new ArkEvent(ArkEventKind.Grab, anchor, hero.SlotId, ball.Id)); break;
                     }
                     ball.Velocity = Limit(ball.Velocity + pull.Normalized * Tuning.attractionAcceleration * dt);
@@ -234,7 +266,7 @@ namespace CrashBashRemake
             ball.GrabOwnerSlot = -1;
             ArkVector direction = ArkenoidArenaGeometry.Inward(hero.Side);
             ArkVector launch = HeroPosition(hero) + direction * Tuning.grabDistance;
-            ball.Position = Rules.TestLaunchBounds(launch, Geometry) ? launch : new ArkVector();
+            ball.Position = ball.PreviousPosition = Rules.TestLaunchBounds(launch, Geometry) ? launch : new ArkVector();
             ball.Velocity = direction * (fire ? Tuning.grabReleaseSpeed : Tuning.launchSpeed);
             ball.ContactImmunity = .08f; ball.LastCollisionSlot = hero.SlotId;
             if (fire)
@@ -249,7 +281,7 @@ namespace CrashBashRemake
         {
             if (!ArkMath.Finite(position.X) || !ArkMath.Finite(position.Y) || !ArkMath.Finite(velocity.X) || !ArkMath.Finite(velocity.Y))
                 throw new ArgumentException("Ball data must be finite.");
-            var ball = new ArkBallModel { Id = nextBallId++, Position = position, Velocity = Limit(velocity), Scores = scores };
+            var ball = new ArkBallModel { Id = nextBallId++, Position = position, PreviousPosition = position, Velocity = Limit(velocity), Scores = scores };
             balls.Add(ball); return ball;
         }
         ArkVector Limit(ArkVector velocity) => velocity.LengthSquared > Tuning.maxBallSpeed * Tuning.maxBallSpeed
@@ -259,7 +291,7 @@ namespace CrashBashRemake
             ArkVector origin = Rules.LaunchPosition(corner, Geometry);
             if (!Rules.TestLaunchBounds(origin, Geometry)) origin = new ArkVector();
             ArkVector target = new ArkVector((float)random.NextDouble() * 3 - 1.5f, (float)random.NextDouble() * 3 - 1.5f);
-            ball.Position = origin; ball.Velocity = (target - origin).Normalized * Tuning.launchSpeed;
+            ball.Position = ball.PreviousPosition = origin; ball.Velocity = (target - origin).Normalized * Tuning.launchSpeed;
             ball.Active = true; ball.GrabOwnerSlot = -1; ball.LastTouchSlot = -1;
             ball.RespawnTime = ball.ContactImmunity = 0; ball.LastCollisionSlot = -1;
             events.Add(new ArkEvent(ArkEventKind.BallLaunched, origin, ball: ball.Id, corner: corner));
@@ -373,7 +405,7 @@ namespace CrashBashRemake
             if (hero.IsEliminated)
             {
                 if (hero.GrabbedBallId >= 0) FreeGrabbedObject(hero, false);
-                hero.Velocity = 0; SetState(hero, ArkenoidHeroState.Lose);
+                hero.Velocity = hero.MotorVelocity = 0; SetState(hero, ArkenoidHeroState.Lose);
                 events.Add(new ArkEvent(ArkEventKind.Eliminated, HeroPosition(hero), hero.SlotId));
             }
             int alive = 0; ArkHeroModel winner = null;
@@ -385,7 +417,11 @@ namespace CrashBashRemake
         {
             winner.Wins++; RoundWinnerSlot = winner.SlotId;
             SetState(winner, ArkenoidHeroState.Winner);
-            foreach (ArkHeroModel hero in heroes) if (hero.GrabbedBallId >= 0) FreeGrabbedObject(hero, false);
+            foreach (ArkHeroModel hero in heroes)
+            {
+                hero.Velocity = hero.MotorVelocity = 0; hero.PreviousLateral = hero.Lateral;
+                if (hero.GrabbedBallId >= 0) FreeGrabbedObject(hero, false);
+            }
             Phase = ArkenoidMatchPhase.RoundResult; PhaseTime = Tuning.roundResultSeconds;
             LaunchWarningCorner = -1; warningTime = 0;
             events.Add(new ArkEvent(ArkEventKind.RoundWon, HeroPosition(winner), winner.SlotId));
@@ -413,10 +449,16 @@ namespace CrashBashRemake
                 if (PredictDanger(hero, ball, out float time, out float _) && time < dangerTime)
                 { dangerTime = time; danger = ball; }
             float difference = hero.BotTarget - hero.Lateral;
-            bool boost = dangerTime < Math.Abs(difference) / Tuning.moveSpeed + .15f;
-            float speed = Tuning.moveSpeed * (boost ? Tuning.boostMultiplier : 1);
+            ArkMotionSettings motion = Tuning.MotionFor(hero.Character);
+            bool boost = dangerTime < Math.Abs(difference) / motion.speed + .15f;
+            float speed = boost ? motion.sprintSpeed : motion.speed;
+            // Brake before the target instead of oscillating around it with inertia.
+            float stoppingDistance = hero.MotorVelocity * hero.MotorVelocity / (2 * motion.deceleration);
+            float axis = Math.Abs(difference) < .035f ||
+                (Math.Sign(difference) == Math.Sign(hero.MotorVelocity) && Math.Abs(difference) <= stoppingDistance) ? 0
+                : ArkMath.Clamp(difference / (speed * Math.Max(dt, .0001f)), -1, 1);
             return new ArkInput {
-                Axis = Math.Abs(difference) < .035f ? 0 : ArkMath.Clamp(difference / (speed * Math.Max(dt, .0001f)), -1, 1),
+                Axis = axis,
                 Boost = boost,
                 KickPressed = danger != null && dangerTime < .19f && Influencable(hero, danger, Tuning.kickRadius),
                 RepulsePressed = hero.RepulseCharges > 0 && danger != null && dangerTime < .12f,

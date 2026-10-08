@@ -20,16 +20,19 @@ and invisible Unity sensors. BA/SE/NG/PI have separate profiles and dispatch;
 variant-specific original geometry and hazards still require calibration.
 
 See [PS1 analysis](Docs/PS1_Ballistix_Analysis.md),
-[reproducible evidence](Docs/PS1_Arkenoid_Evidence.json) and
+[reproducible evidence](Docs/PS1_Arkenoid_Evidence.json),
+[runtime PS1 measurements](Docs/PS1_Arkenoid_Runtime_Measurements.json) and
 [implementation / verification limits](Docs/Arkenoid_Implementation.md).
 
 ```sh
 python -m unittest discover -s tools -p 'test_*.py'
 python tools/run_headless_tests.py --dotnet /path/to/dotnet
+python tools/compile_unity_references.py --dotnet /path/to/dotnet --managed /path/to/Unity/Editor/Data/Managed
 python tools/analyze_arkenoid.py '/private/Crash Bash.bin' --cue '/private/Crash Bash.cue' --output Docs/PS1_Arkenoid_Evidence.json
 ```
 
-**C# simulation tests pass. Unity editor import, shader rendering, EditMode tests
+**C# simulation tests and runtime compilation against genuine Unity 6 references pass.
+Unity editor import, shader rendering, EditMode tests
 and a Windows executable build have not yet been run in this session.**
 Use **CrashBash → Build Windows player** in a licensed Unity installation, or
 `Unity -batchmode -quit -projectPath <this-repo> -executeMethod CrashBashRemake.Editor.ArkenoidBuildTools.BuildWindows -logFile build.log`.

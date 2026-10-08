@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 namespace CrashBashRemake
 {
@@ -7,14 +8,22 @@ namespace CrashBashRemake
     {
         PrototypeBootstrap bootstrap;
         bool setup;
+        readonly List<PlayerSlot> draft = new List<PlayerSlot>();
         GUIStyle title, label, small;
         public void Configure(PrototypeBootstrap owner){bootstrap=owner;}
         void Update()
         {
             if(!bootstrap || !bootstrap.Match)return;
+            if(setup && Input.GetKeyDown(KeyCode.Escape)){OpenSetup(false);return;}
             if(Input.GetKeyDown(KeyCode.Tab))OpenSetup(!setup);
         }
-        void OpenSetup(bool open){setup=open;bootstrap.Match.SetPaused(open);}
+        void OpenSetup(bool open)
+        {
+            setup=open; bootstrap.Match.SetMenuOpen(open);
+            draft.Clear();
+            if(open)foreach(var slot in bootstrap.players)
+                draft.Add(new PlayerSlot{slotId=slot.slotId,side=slot.side,character=slot.character,isHuman=slot.isHuman,inputIndex=slot.inputIndex});
+        }
         void Styles()
         {
             if(title!=null)return;
@@ -61,16 +70,16 @@ namespace CrashBashRemake
                 float x=width/2-325,y=height/2-164;
                 Panel(new Rect(x,y,650,330),new Color(.016f,.032f,.056f,.98f));
                 GUI.Label(new Rect(x+10,y+12,630,40),"BALLISTIX · PLAYERS",title);
-                for(int i=0;i<bootstrap.players.Count;i++)
+                for(int i=0;i<draft.Count;i++)
                 {
-                    var slot=bootstrap.players[i];float row=y+65+i*49;
+                    var slot=draft[i];float row=y+65+i*49;
                     GUI.Label(new Rect(x+14,row,65,30),"P"+(slot.slotId+1),label);
                     if(GUI.Button(new Rect(x+86,row,235,34),ArkenoidPilotVisual.CharacterName(slot.character)+"  >"))
                         slot.character=(CharacterId)(((int)slot.character+1)%8);
                     if(GUI.Button(new Rect(x+330,row,126,34),slot.side+"  >"))
                     {
                         ArenaSide oldSide=slot.side;ArenaSide next=(ArenaSide)(((int)slot.side+1)%4);
-                        foreach(var other in bootstrap.players)if(other!=slot && other.side==next){other.side=oldSide;break;}
+                        foreach(var other in draft)if(other!=slot && other.side==next){other.side=oldSide;break;}
                         slot.side=next;
                     }
                     string device=slot.isHuman?"KEYBOARD "+(slot.inputIndex+1):"CPU";
@@ -79,12 +88,19 @@ namespace CrashBashRemake
                         if(!slot.isHuman){slot.isHuman=true;slot.inputIndex=0;}
                         else if(slot.inputIndex==0)slot.inputIndex=1;
                         else slot.isHuman=false;
-                        if(slot.isHuman)foreach(var other in bootstrap.players)
+                        if(slot.isHuman)foreach(var other in draft)
                             if(other!=slot && other.isHuman && other.inputIndex==slot.inputIndex)other.isHuman=false;
                     }
                 }
                 if(GUI.Button(new Rect(x+110,y+274,210,38),"START NEW MATCH"))
-                {setup=false;bootstrap.BuildSession();}
+                {
+                    foreach(var choice in draft)
+                    {
+                        var slot=bootstrap.players.Find(p=>p.slotId==choice.slotId);
+                        slot.side=choice.side;slot.character=choice.character;slot.isHuman=choice.isHuman;slot.inputIndex=choice.inputIndex;
+                    }
+                    setup=false;draft.Clear();bootstrap.BuildSession();
+                }
                 if(GUI.Button(new Rect(x+330,y+274,210,38),"BACK TO GAME"))OpenSetup(false);
             }
             GUI.matrix=old;

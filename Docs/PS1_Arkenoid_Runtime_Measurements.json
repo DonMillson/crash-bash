@@ -1,0 +1,190 @@
+{
+  "schema_version": 1,
+  "recorded_utc": "2026-10-08",
+  "source": "User-supplied NTSC-U SCUS_945.70 Crash Bash BIN/CUE; no original assets or executable bytes included",
+  "method": {
+    "emulator": "PCSX-ReARMed libretro, interpreter DYNAREC=0, commit c881679",
+    "bios": "HLE; original hardware comparison still pending",
+    "sample": "2MB system RAM read after each retro_run; three signed 32-bit coordinate fields",
+    "hero_render_xyz_ram_offset": "0x1D3040",
+    "hero_physics_xyz_ram_offset": "0x1D3138",
+    "scope": "Battle mode, one human player: Dingodile selected as P1; Crashball, Medium, default 3 cups; no kick/held ball",
+    "logic_ticks_per_second": 30,
+    "video_frames_per_logic_tick": 2,
+    "video_callback_rate": 60
+  },
+  "conversion": {
+    "original_coordinate_units_per_unity_unit": 400,
+    "status": "Chosen authoring scale, not a PS1 constant"
+  },
+  "observed": {
+    "normal_acceleration_units_per_tick": 34,
+    "normal_max_displacement_per_tick": 104,
+    "sprint_acceleration_units_per_tick": 56,
+    "sprint_max_displacement_per_tick": 160,
+    "released_input_deceleration_units_per_tick": 18,
+    "defender_line_coordinate_magnitude": 2176,
+    "human_x_limits": [
+      -1200,
+      1201
+    ],
+    "four_hero_render_xyz_ram_offsets": [
+      "0x1D3040",
+      "0x1D341C",
+      "0x1D37F8",
+      "0x1D3BD4"
+    ],
+    "starting_points_per_defender": 15,
+    "default_match_cups": 3,
+    "original_buttons": {
+      "move": "D-pad",
+      "sprint": "hold L1 or R1",
+      "kick": "Square"
+    }
+  },
+  "unconfirmed": [
+    "Other seven character motion profiles",
+    "Reason for +1201 right bound versus -1200 left bound",
+    "Pressed reversal, releasing sprint while continuing direction, kick motion/state interaction",
+    "Exact floor contour, collision radii, goal aperture and scoring plane",
+    "Ball speed, rebound angle, kick multiplier/window, spawn cadence/population cap",
+    "Resource/overlay mapping of BA/SE/NG/PI and special object ownership",
+    "Original animation durations and poses; original bot logic"
+  ],
+  "motion_traces": [
+    {
+      "name": "normal_left_from_rest",
+      "segments": [
+        {
+          "axis": -1,
+          "sprint": false,
+          "x_per_logic_tick": [
+            -34,
+            -102,
+            -204,
+            -308,
+            -412,
+            -516,
+            -620,
+            -724,
+            -828,
+            -932,
+            -1036,
+            -1140
+          ]
+        }
+      ]
+    },
+    {
+      "name": "normal_right_from_rest",
+      "segments": [
+        {
+          "axis": 1,
+          "sprint": false,
+          "x_per_logic_tick": [
+            34,
+            102,
+            204,
+            308,
+            412,
+            516,
+            620,
+            724,
+            828,
+            932,
+            1036,
+            1140
+          ]
+        }
+      ]
+    },
+    {
+      "name": "sprint_left_from_rest_and_bound",
+      "segments": [
+        {
+          "axis": -1,
+          "sprint": true,
+          "x_per_logic_tick": [
+            -56,
+            -168,
+            -328,
+            -488,
+            -648,
+            -808,
+            -968,
+            -1128,
+            -1200,
+            -1200,
+            -1200,
+            -1200
+          ]
+        }
+      ]
+    },
+    {
+      "name": "normal_run_then_release",
+      "segments": [
+        {
+          "axis": -1,
+          "sprint": false,
+          "x_per_logic_tick": [
+            -34,
+            -102,
+            -204,
+            -308,
+            -412,
+            -516,
+            -620,
+            -724,
+            -828,
+            -932
+          ]
+        },
+        {
+          "axis": 0,
+          "sprint": false,
+          "x_per_logic_tick": [
+            -1018,
+            -1086,
+            -1136,
+            -1168,
+            -1182,
+            -1182
+          ]
+        }
+      ]
+    },
+    {
+      "name": "sprint_run_then_release_before_bound",
+      "segments": [
+        {
+          "axis": -1,
+          "sprint": true,
+          "x_per_logic_tick": [
+            -56,
+            -168,
+            -328,
+            -488
+          ]
+        },
+        {
+          "axis": 0,
+          "sprint": false,
+          "x_per_logic_tick": [
+            -630,
+            -754,
+            -860,
+            -948,
+            -1018,
+            -1070,
+            -1104,
+            -1120,
+            -1120,
+            -1120
+          ]
+        }
+      ]
+    }
+  ],
+  "archive_sha256": "3a02b477ab48ae99010e1a9db3b0d591c79e800b43d10779945ca18ab788acb7"
+}

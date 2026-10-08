@@ -63,10 +63,12 @@ namespace CrashBashRemake
             underLight.enabled=true;
             if (previousState != model.State && (model.State == ArkenoidHeroState.Kick || model.State == ArkenoidHeroState.RedKick)) recoil=1;
             previousState=model.State; recoil=Mathf.MoveTowards(recoil,0,Time.deltaTime*5);
-            float motion=Mathf.Clamp(model.Velocity/hero.Simulation.Tuning.moveSpeed,-1.5f,1.5f);
+            float motion=Mathf.Clamp(model.Velocity/hero.Simulation.Tuning.MotionFor(model.Character).speed,-1.6f,1.6f);
             float hover=Mathf.Sin(Time.time*4.5f+model.SlotId)*.027f;
             float sinking=model.State==ArkenoidHeroState.Die ? Mathf.Clamp01(model.StateTime/.65f)*-.24f : 0;
-            transform.localPosition=new Vector3(0,-.055f+hover+sinking,0);
+            float lateral = Mathf.Lerp(model.PreviousLateral,model.Lateral,hero.PresentationAlpha)-model.Lateral;
+            Vector3 smoothing = ArkenoidPlayerMotor.ToWorld(ArkenoidArenaGeometry.Tangent(model.Side)*lateral,0);
+            transform.localPosition=smoothing+new Vector3(0,-.055f+hover+sinking,0);
             transform.localRotation=Quaternion.Euler(-recoil*9, yaw, -motion*9+(model.State==ArkenoidHeroState.Die?model.StateTime*80:0));
             float power=.85f+Mathf.Abs(motion)*.45f+recoil*.8f;
             for(int i=0;i<jets.Count;i++) jets[i].localScale=new Vector3(1,power,1);

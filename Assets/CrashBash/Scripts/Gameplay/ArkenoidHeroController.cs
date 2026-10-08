@@ -14,11 +14,13 @@ namespace CrashBashRemake
         public ArkenoidSimulation Simulation { get; private set; }
         ArkInput pending;
         bool acceptInput;
+        MatchManager host;
+        public float PresentationAlpha => host ? host.PresentationAlpha : Simulation == null ? 1 : Simulation.InterpolationAlpha;
 
         void Awake() { Motor = GetComponent<ArkenoidPlayerMotor>(); }
-        public void Configure(ArkenoidSimulation simulation, ArkHeroModel model, int device)
+        public void Configure(ArkenoidSimulation simulation, ArkHeroModel model, int device, MatchManager viewHost = null)
         {
-            Simulation = simulation; Model = model; human = model.Human; inputIndex = device;
+            Simulation = simulation; Model = model; human = model.Human; inputIndex = device; host = viewHost;
             Motor.Configure(simulation, model); acceptInput = true; enabled = true;
         }
         public void AllowInput(bool allow) { acceptInput = allow; if (!allow) pending = new ArkInput(); }
