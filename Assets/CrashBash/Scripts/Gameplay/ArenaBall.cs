@@ -1,47 +1,14 @@
 using UnityEngine;
-
-namespace CrashBashRemake
-{
-    [RequireComponent(typeof(Rigidbody), typeof(SphereCollider))]
-    public class ArenaBall : MonoBehaviour
-    {
-        public float launchSpeed = 8f;
-        public float maxSpeed = 15f;
-        Rigidbody body;
-
-        void Awake()
-        {
-            body = GetComponent<Rigidbody>();
-            body.useGravity = false;
-            body.constraints = RigidbodyConstraints.FreezePositionY;
-            body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-        }
-
-        void Start() => Launch();
-
-        void FixedUpdate()
-        {
-            Vector3 v = body.linearVelocity;
-            v.y = 0f;
-            if (v.magnitude > maxSpeed) v = v.normalized * maxSpeed;
-            if (v.magnitude < launchSpeed * .55f && v.sqrMagnitude > .01f) v = v.normalized * launchSpeed * .55f;
-            body.linearVelocity = v;
-        }
-
-        public void ResetBall()
-        {
-            body.position = new Vector3(0f, .55f, 0f);
-            body.linearVelocity = Vector3.zero;
-            body.angularVelocity = Vector3.zero;
-            Launch();
-        }
-
-        void Launch()
-        {
-            Vector2 d = Random.insideUnitCircle.normalized;
-            if (Mathf.Abs(d.x) < .25f) d.x = Mathf.Sign(d.x == 0 ? 1 : d.x) * .35f;
-            if (Mathf.Abs(d.y) < .25f) d.y = Mathf.Sign(d.y == 0 ? 1 : d.y) * .35f;
-            body.linearVelocity = new Vector3(d.x, 0, d.y).normalized * launchSpeed;
-        }
-    }
+namespace CrashBashRemake {
+ [RequireComponent(typeof(Rigidbody),typeof(SphereCollider))]
+ public class ArenaBall:MonoBehaviour {
+  public float launchSpeed=7f,maxSpeed=16f;
+  Rigidbody body;
+  void Awake(){body=GetComponent<Rigidbody>();body.useGravity=false;body.constraints=RigidbodyConstraints.FreezePositionY;body.collisionDetectionMode=CollisionDetectionMode.ContinuousDynamic;body.linearDamping=0f;var c=GetComponent<SphereCollider>();c.material=new PhysicMaterial("BallBounce"){bounciness=1f,dynamicFriction=0f,staticFriction=0f,bounceCombine=PhysicMaterialCombine.Maximum,frictionCombine=PhysicMaterialCombine.Minimum};}
+  void FixedUpdate(){Vector3 v=body.linearVelocity;v.y=0; if(v.sqrMagnitude<1f)v=new Vector3(1,0,1)*launchSpeed;body.linearVelocity=v.normalized*Mathf.Clamp(v.magnitude,launchSpeed*.65f,maxSpeed);}
+  public void ResetBall(){body.position=new Vector3(0,.55f,0);body.linearVelocity=Vector3.zero;Launch();}
+  public void Launch(){Vector2 d=Random.insideUnitCircle.normalized;if(d.sqrMagnitude<.1f)d=Vector2.right;body.linearVelocity=new Vector3(d.x,0,d.y)*launchSpeed;}
+  public void LaunchFrom(Vector3 origin,Vector3 direction,float speed){body.position=origin;body.linearVelocity=direction.normalized*speed;}
+  public void Kick(Vector3 away,float multiplier){Vector3 v=body.linearVelocity;body.linearVelocity=(v.normalized+away.normalized*.65f).normalized*Mathf.Min(maxSpeed,Mathf.Max(launchSpeed,v.magnitude)*multiplier);}
+ }
 }
