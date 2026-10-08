@@ -152,3 +152,29 @@ This confirms that BA/SE/NG/PI have distinct boundary and out-of-bounds paths in
 
 ### Immediate implementation rule
 Do not hard-code one generic rectangular arena. Build an Arkenoid base controller with pluggable boundary, launch, scoring and special-object behavior for BA, SE, NG and PI. Rendering remains separate from collision/gameplay geometry.
+
+
+## Deeper header recovery
+
+A contiguous preprocessed C/C++ header section was located at approximately `0x045CE8E3` inside `CRASHBSH.DAT`. It identifies the original source path as:
+
+`c:\\Crash4\\GameEng\\Arkenoid\\arkenoid.h`
+
+Additional behavior entry points recovered:
+- `AR_Triggers`, `AR_EarliestTriggers`, `AR_InitIcons`
+- `AR_InitShadow`, `AR_UpdateShadow`
+- `TestArkenoidStop`, `TestForMove`
+- state pairs for Idle, Move, Kick, RedKick, Grab, Taunt, Winner, Lose, Die, Dead
+- `PickArkPlayer`, `FinishArkLevel`
+- `Init_N_Gin`, `Plot_N_Gin`
+- `InitARKfloor`, `UpdateArkFloor`, `ArkCrateMaster`
+- seaweed, camera flash, dead-wall, pickup and laser-wall systems
+
+The original object enum begins at `0x1500` and includes:
+`AST_Ball, AST_AR_PU, AST_ArkRepulse, AST_ArkFlash, AST_ArkDeadWall, AST_NGDeadWall, AST_N_Gin, AST_SeaWeed, AST_LaserWall`.
+
+### Reconstruction consequence
+The visible player object must support explicit PS1-style animation/gameplay states rather than being a generic paddle:
+Idle -> Move -> Kick/RedKick/Grab -> Taunt/Win/Lose/Die/Dead.
+
+The four variants also need separate environment modules because the original engine contains N.Gin, seaweed and laser-wall systems alongside variant-specific bounds.
