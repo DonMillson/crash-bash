@@ -82,24 +82,5 @@ namespace CrashBashRemake
             if (Input.GetKeyDown(KeyCode.R)) RestartMatch();
             if (Input.GetKeyDown(KeyCode.Escape)) SetPaused(!Paused);
         }
-        void OnGUI()
-        {
-            if (Simulation == null) return;
-            var style = new GUIStyle(GUI.skin.label) { fontSize = 19, alignment = TextAnchor.MiddleCenter };
-            GUILayout.BeginArea(new Rect(12, 8, Screen.width - 24, 90));
-            GUILayout.BeginHorizontal();
-            foreach (PlayerSlot slot in slots)
-            {
-                ArkHeroModel hero = Simulation.Hero(slot.slotId);
-                GUILayout.Label(slot.character + "   " + (hero.IsEliminated ? "OUT" : hero.Lives.ToString("00")) + "   " + hero.Wins + "/" + Simulation.Tuning.winsNeeded, style);
-            }
-            GUILayout.EndHorizontal();
-            string status = Paused ? "PAUSED" : Simulation.Phase == ArkenoidMatchPhase.Countdown ? "READY  " + Mathf.CeilToInt(Simulation.PhaseTime)
-                : Simulation.Phase == ArkenoidMatchPhase.MatchResult ? "MATCH WINNER: " + Simulation.Hero(Simulation.MatchWinnerSlot).Character
-                : Simulation.Phase == ArkenoidMatchPhase.RoundResult ? "ROUND WINNER: " + Simulation.Hero(Simulation.RoundWinnerSlot).Character : "";
-            GUILayout.Label(status, style); GUILayout.EndArea();
-            GUI.Label(new Rect(12, Screen.height - 32, Screen.width - 24, 26),
-                "A/D or arrows: move  |  Shift: boost  |  Space: kick  |  R: new match  |  Esc: pause");
-        }
     }
 }

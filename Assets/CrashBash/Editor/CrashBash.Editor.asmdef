@@ -1,0 +1,6 @@
+{
+  "name": "CrashBash.Editor",
+  "rootNamespace": "CrashBashRemake.Editor",
+  "references": ["CrashBash.Arkenoid"],
+  "includePlatforms": ["Editor"]
+}

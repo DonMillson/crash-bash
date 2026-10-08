@@ -65,3 +65,34 @@ The Unity editor is unavailable here. Unity import, editor compilation, renderin
 PlayMode and Windows executable builds have **not** been run. A C# syntax parse
 is useful but is not represented as a Unity build. Full editor verification is
 still required before calling the vertical slice PS1-accurate or release-ready.
+
+## Vehicle, arena and animation integration
+
+The collider root has unit scale, no Renderer and one invisible BoxCollider.
+The replaceable hovercraft visual uses 27 authored mesh parts: a lofted pressure
+hull, outriggers, armour, front deflector, rubber skirt, seat, console, headlamps,
+turbine collars, hover nozzles, jets and levitation coil. It includes a distinct
+modular pilot rig for every character. These are original procedural art, not
+finished replica character models or extracted PS1 meshes.
+
+All ten gameplay states reach the visual layer. Breathing, movement bank, kick
+recoil, magnet pose, taunt, victory, loss and death use authored procedural motion.
+Their timing/poses have not been measured from original animation records. Pilots
+are selected independently in the Players menu; changing side swaps the two side
+assignments while preserving their slot and character. Two keyboard players and
+CPU control are selectable; gamepad support is still pending.
+
+The arena renderer consumes the selected simulation geometry. Goal thresholds,
+posts, contiguous corner walls, movement lane markings, corner launch nozzles,
+warning lamps, score readouts and eliminated-goal gates are live. Runtime PBR
+materials, a generated brushed-panel texture, shadows, emissive lamps, ball seams,
+trails, pooled event-driven rings and authored synthetic audio replace the greybox.
+No art component creates a gameplay collider or changes a movement/spawn bound.
+An offscreen mesh inspection rendered the actual C#-exported craft recipe; this
+was **not a Unity game screenshot**. Mesh indices and outward winding pass the
+same C# test harness.
+
+Unity EditMode integration tests and Windows build menu/CLI entry points are
+included. They remain **unexecuted** until the Unity editor is available. The
+Windows builder creates a scene in the existing project, retains runtime shaders,
+and checks the real BuildReport before reporting success.

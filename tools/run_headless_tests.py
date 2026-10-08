@@ -14,6 +14,7 @@ import tempfile
 
 ap = argparse.ArgumentParser(description=__doc__)
 ap.add_argument('--dotnet', default=shutil.which('dotnet'))
+ap.add_argument('--export', type=pathlib.Path)
 args = ap.parse_args()
 if not args.dotnet:
     ap.error('Install the .NET 8 SDK or pass --dotnet')
@@ -22,7 +23,7 @@ project = pathlib.Path(__file__).resolve().parent.parent
 sdk = sorted((root/'sdk').glob('8.*/Roslyn/bincore/csc.dll'))[-1]
 refs = sorted((root/'packs/Microsoft.NETCore.App.Ref').glob('8.*/ref/net8.0'))[-1]
 runtime = refs.parent.parent.name
-files = list((project/'Assets/CrashBash/Scripts/Simulation').glob('*.cs')) + [project/p for p in [
+files = list((project/'Assets/CrashBash/Scripts/Simulation').glob('*.cs')) + list((project/'Assets/CrashBash/Scripts/Art').glob('*.cs')) + [project/p for p in [
     'Assets/CrashBash/Scripts/Core/PlayerIdentity.cs',
     'Assets/CrashBash/Scripts/Gameplay/ArkenoidHeroState.cs',
     'Assets/CrashBash/Scripts/Gameplay/ArkenoidVariant.cs', 'Tests/Headless/Program.cs']]
@@ -36,4 +37,4 @@ with tempfile.TemporaryDirectory(prefix='arkenoid-tests-') as tmp:
     output.with_suffix('.runtimeconfig.json').write_text(json.dumps({'runtimeOptions':{
         'tfm':'net8.0','framework':{'name':'Microsoft.NETCore.App','version':runtime}}}))
     subprocess.run([str(root/'dotnet'),str(sdk),'-noconfig','@'+str(rsp)],check=True,cwd=project)
-    subprocess.run([str(root/'dotnet'),str(output)],check=True,cwd=project)
+    subprocess.run([str(root/'dotnet'),str(output)] + (['--export', str(args.export.resolve())] if args.export else []),check=True,cwd=project)

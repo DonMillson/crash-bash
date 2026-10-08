@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../Assets/CrashBash/Scripts/Simulation/*.cs" />
+    <Compile Include="../../Assets/CrashBash/Scripts/Art/*.cs" />
     <Compile Include="../../Assets/CrashBash/Scripts/Core/PlayerIdentity.cs" />
     <Compile Include="../../Assets/CrashBash/Scripts/Gameplay/ArkenoidHeroState.cs" />
     <Compile Include="../../Assets/CrashBash/Scripts/Gameplay/ArkenoidVariant.cs" />

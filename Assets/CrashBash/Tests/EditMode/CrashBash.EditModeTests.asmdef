@@ -1,0 +1,7 @@
+{
+  "name": "CrashBash.EditModeTests",
+  "rootNamespace": "CrashBashRemake.Tests",
+  "references": ["CrashBash.Arkenoid"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

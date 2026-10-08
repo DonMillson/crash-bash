@@ -34,8 +34,4 @@ namespace CrashBashRemake
             }
         }
     }
-    public sealed class BAEnvironment : ArkenoidEnvironment { public override ArkenoidVariant Variant => ArkenoidVariant.BA; }
-    public sealed class SEEnvironment : ArkenoidEnvironment { public override ArkenoidVariant Variant => ArkenoidVariant.SE; }
-    public sealed class NGEnvironment : ArkenoidEnvironment { public override ArkenoidVariant Variant => ArkenoidVariant.NG; }
-    public sealed class PIEnvironment : ArkenoidEnvironment { public override ArkenoidVariant Variant => ArkenoidVariant.PI; }
 }

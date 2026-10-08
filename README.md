@@ -1,23 +1,35 @@
-# Crash Bash – Modern Remake Prototype
+# Crash Bash · Ballistix / Crashball
 
-Private/fan-development prototype focused first on a modern 3D four-player ball arena.
+Development continues in this existing Unity 6 project. Only the Ballistix family
+is in scope. The user's PS1 image is private reference material; no original
+PS1 graphical assets, ROM bytes or original function bodies are distributed.
 
-## Milestone 1: Ball Arena
-- 4 independent player slots
-- character selection decoupled from arena position
-- human or bot controller per slot
-- physics ball(s)
-- four goals and lives
-- round/match state
-- runtime prototype bootstrap (no hand-built scene required)
+Open with **Unity 6000.0.60f1**, open an empty scene and press Play. The runtime
+bootstrap creates the Crashball slice. Alternatively use **CrashBash → Create
+Crashball scene**, then open `Assets/CrashBash/Scenes/Crashball.unity`.
 
-## Unity
-Target: Unity 6 LTS, 3D project.
+- A/D or arrows: move; Shift/Q/E: sprint; Space: kick; T: taunt.
+- Tab: choose any of the eight characters, a side, and human/CPU control.
+- Second keyboard: J/L move, Right Shift sprint, I kick, P taunt.
+- R: new match; Escape: pause. Match results persist until restart.
+- Hold Ctrl to attract and release to fire; X to spend a repulse charge when the
+  corresponding **opt-in calibration settings** are enabled in the Inspector.
 
-Open the project, create/open an empty scene and press Play. `PrototypeBootstrap` creates the first playable greybox automatically once the scripts compile.
+Gameplay uses one tested fixed-step Arkenoid simulation, independent of visuals
+and invisible Unity sensors. BA/SE/NG/PI have separate profiles and dispatch;
+variant-specific original geometry and hazards still require calibration.
 
-### Controls
-- Player: A/D or Left/Right Arrow
-- R: restart match
+See [PS1 analysis](Docs/PS1_Ballistix_Analysis.md),
+[reproducible evidence](Docs/PS1_Arkenoid_Evidence.json) and
+[implementation / verification limits](Docs/Arkenoid_Implementation.md).
 
-Characters are represented by temporary capsules in this first gameplay milestone. Original/authorized art can be plugged into the same slot system later.
+```sh
+python -m unittest discover -s tools -p 'test_*.py'
+python tools/run_headless_tests.py --dotnet /path/to/dotnet
+python tools/analyze_arkenoid.py '/private/Crash Bash.bin' --cue '/private/Crash Bash.cue' --output Docs/PS1_Arkenoid_Evidence.json
+```
+
+**C# simulation tests pass. Unity editor import, shader rendering, EditMode tests
+and a Windows executable build have not yet been run in this session.**
+Use **CrashBash → Build Windows player** in a licensed Unity installation, or
+`Unity -batchmode -quit -projectPath <this-repo> -executeMethod CrashBashRemake.Editor.ArkenoidBuildTools.BuildWindows -logFile build.log`.

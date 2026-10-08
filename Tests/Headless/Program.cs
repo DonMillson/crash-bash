@@ -23,8 +23,22 @@ static class Program
         return sim;
     }
     static void Step(ArkenoidSimulation sim, int count) { for (int i = 0; i < count; i++) sim.Step(.02f); }
-    static void Main()
+    static void Main(string[] args)
     {
+        foreach (ArkCraftPart part in ArkenoidCraftRecipe.Create())
+        {
+            double volume = 0;
+            var v = part.Mesh.Vertices; var triangles = part.Mesh.Triangles;
+            for (int i=0;i<triangles.Count;i+=3)
+            {
+                Check(triangles[i]>=0 && triangles[i]<v.Count && triangles[i+1]>=0 && triangles[i+1]<v.Count && triangles[i+2]>=0 && triangles[i+2]<v.Count,"invalid craft mesh indices");
+                ArkVertex a=v[triangles[i]], b=v[triangles[i+1]], c=v[triangles[i+2]];
+                volume += (a.X*(b.Y*c.Z-b.Z*c.Y)+a.Y*(b.Z*c.X-b.X*c.Z)+a.Z*(b.X*c.Y-b.Y*c.X))/6.0;
+            }
+            Check(volume>0,"craft mesh has inward winding or no volume: "+part.Name);
+        }
+        if (args.Length==2 && args[0]=="--export")
+            System.IO.File.WriteAllText(args[1],System.Text.Json.JsonSerializer.Serialize(ArkenoidCraftRecipe.Create(),new System.Text.Json.JsonSerializerOptions{IncludeFields=true}));
         var sim = Start();
         Check(sim.Hero(2).Side == ArenaSide.Bottom && sim.Hero(2).Character == CharacterId.RillaRoo, "slot/side/character were coupled");
         sim.SetInput(2, new ArkInput { Axis = 1 }); Step(sim, 50);
