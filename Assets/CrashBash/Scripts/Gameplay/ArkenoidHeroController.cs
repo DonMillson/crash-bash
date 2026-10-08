@@ -20,6 +20,7 @@ namespace CrashBashRemake
         void Awake() { Motor = GetComponent<ArkenoidPlayerMotor>(); }
         public void Configure(ArkenoidSimulation simulation, ArkHeroModel model, int device, MatchManager viewHost = null)
         {
+            if (!Motor) Motor = GetComponent<ArkenoidPlayerMotor>();
             Simulation = simulation; Model = model; human = model.Human; inputIndex = device; host = viewHost;
             Motor.Configure(simulation, model); acceptInput = true; enabled = true;
         }

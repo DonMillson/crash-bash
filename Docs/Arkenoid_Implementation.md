@@ -13,8 +13,9 @@ button edges until consumption and interpolating only the replaceable visuals.
 - Four defenders, one-axis acceleration, sprint and release inertia, bounded
   using the selected profile. Character motion overrides are independent of side.
 - Swept ball contacts with finite corner walls, goal posts and moving defenders.
-- Timed kick, passive deflection with movement/offset influence, multiple corner
-  launches, duplicate-safe scoring and non-scoring ball support.
+- Timed kick with a growing influence window and one impulse per ball/action,
+  passive deflection with movement/offset influence, multiple corner launches,
+  duplicate-safe scoring and non-scoring ball support.
 - Lose -> Die -> Dead progression; eliminated players stop moving and their goal
   becomes a reflecting wall immediately. Countdown, round result, three-win
   match result, and explicit restart. Match wins no longer disappear automatically.
@@ -47,8 +48,9 @@ in `PS1_Arkenoid_Runtime_Measurements.json`. Visual builders consume geometry wi
 modifying it. In particular, `wallHalfExtent=5.81` is derived from the previous
 Unity wall centre (6) minus half its thickness (.38 / 2), not a PS1 coordinate.
 The earlier collision gaps between wall pieces and goal rails are removed by
-using contiguous finite segments. Contact angle, ball speeds, launch interval,
-maximum population, cooldown, score delay and animation durations are unmeasured.
+using contiguous finite segments. Contact angle, exact collision contour, launch
+interval, maximum population, cooldown, score delay and animation durations are
+unmeasured. Scoped current/cruise speed and launch-height observations are described below.
 Ball-to-ball collision is not enabled without a reference measurement.
 
 The supplied NTSC-U image now runs locally in the official PCSX-ReARMed libretro
@@ -63,12 +65,52 @@ authoring choice, not a recovered PS1 constant. Other seven characters still use
 explicitly provisional fallback motion; these observations do not prove their stats.
 
 All four observed defender lines have coordinate magnitude 2176, now 5.44 at the
-chosen scale. Human Dingodile clamps at -1200 and +1201; the current symmetric
-travel of 3 is an approximation that leaves the one-unit asymmetry unresolved.
+chosen scale. Human Dingodile clamps at -1200 and +1201; the Crashball reference profile now includes
+that positive-coordinate overrun. Side-aware limits preserve the coordinate sign
+when translating to a side's lateral axis. Other characters and the unmeasured
+sides still use this provisional bound fallback.
 The goal aperture is temporarily 4.1 to contain the measured lane and vehicle
 collision width. It is **not** a decoded PS1 goal bound. Collision radius, exact
 contour and goal plane still require independent measurements. Modern visuals
 have not changed any of these bounds.
+
+## Ball and kick calibration from the running PS1 reference
+
+The BA working profile opts into `CrashballReference()`; SE, NG and PI retain
+independent provisional profiles. The first observed corner launcher is at
+(2048, -256, -2048), converted to (5.12, .64, -5.12). Its 31 measured height
+samples are reproduced by the 30Hz model: initial upward speed 48 units/tick,
+gravity 6 units/tick squared, resting centre height 96 and rebound ratio .5.
+Horizontal current speed starts at 32 and ramps by 4 towards cruise target 80.
+After the launch ramp, the original trajectory changes direction; the remake's
+final horizontal aim/RNG is still provisional and is not an exact trace match.
+Height is separate from the 2D rules and interpolated only by the ball view.
+
+Controlled incoming-ball probes distinguish current speed from cruise target.
+With cruise target 144, incoming speeds 80/100/144/160/200/240 all produce 207
+on the first affected update. A zero-current/zero-target ball produces 68,
+then 72/76/80. The fitted explanation sets kick speed to old target +64,
+switches cruise target to 144, then applies the ordinary +4/-1 approach.
+This is a behavior reconstruction, not recovered `CalcArkInfluence` code.
+Passive-contact angles and exact original collision shape remain unmeasured.
+
+Dingodile's stationary-ball probes fit a wave starting at radius 384, expanding
+by 192 per logic update, with an effective 24-unit hit padding. It first affects
+balls on action updates 2 through 5. Fine probes separate distances 600/601 and
+792/793; 1177 and above remain unaffected. These are fitted parameters, not
+decoded constants. The wave also separates the ball to its current radius before
+ordinary movement. A ball receives one impulse per action; pushed separation is
+swept against corner/dead walls to avoid tunnelling. Other character wave profiles
+use this explicitly provisional fallback. The VFX follows the moving craft and
+shows the same fitted growth instead of an unrelated easing curve.
+
+One natural score occurs between observed coordinates -2962 and -3101.
+3072 is only a candidate; both stationary and moving RAM teleport experiments
+fail to score across it. Original trajectory flags/goal triggers remain unresolved.
+The working goal plane 7.68 and collision radius .24 are provisional. Radius .24
+is inferred from resting centre height, not decoded collision data.
+The numeric fixture preserves selected real observations and failed experiments;
+no missing coordinates, animation frames or original binary material are included.
 
 ## Verification available in this session
 
@@ -82,8 +124,9 @@ python tools/run_headless_tests.py --dotnet /path/to/dotnet
 Coverage includes five PS1 movement traces (start, sprint, coast and bound),
 sub-tick input edges, update-rate independence, permuted identities, bounded travel, duplicate goals,
 non-scoring balls, dead-wall rebound, elimination, persistent match result,
-restart, fast/moving swept contacts, gated repulse, hold/release, and seeded bot
-soaks for all four variant dispatches. These are real C# simulation tests, not
+three-round win accumulation, restart, fast/moving swept contacts, gated repulse,
+hold/release, 31 launch-height samples, six kick speed probes, coarse/fine kick
+reach probes, wave/corner containment and seeded bot soaks for all four dispatches. These are real C# simulation tests, not
 Python replicas or Unity API stubs.
 
 All runtime C# files also compile using Roslyn against genuine UnityEngine
@@ -94,6 +137,17 @@ checks API signatures and dependencies without fake Unity API stubs:
 python tools/compile_unity_references.py --dotnet /path/to/dotnet --managed /path/to/Unity/Editor/Data/Managed
 ```
 
+Before the local environment disconnected, the expanded simulation suite passed
+195,322 assertions; a 240-second reference-profile CPU game produced 107 goals,
+four eliminations, one round win and a five-ball peak. The final lifecycle and
+three-round additions were made after that run. GitHub Actions now compiles and
+executes the final pure simulation and ISO regressions on each push; its result
+must be inspected before treating the final revision as validated.
+
+The previous runtime revision compiled against 71 genuine Unity reference
+assemblies. Reference compilation has not been rerun after the final lifecycle
+changes or the in-memory recovery of the last stage.
+
 The Unity editor itself is unavailable here. Unity import, editor assembly
 compilation, shader rendering, PlayMode and Windows executable builds have **not**
 been run. C# reference compilation is not represented as a Unity build. Full editor verification is
@@ -101,7 +155,9 @@ still required before calling the vertical slice PS1-accurate or release-ready.
 
 ## Vehicle, arena and animation integration
 
-The collider root has unit scale, no Renderer and one invisible BoxCollider.
+The collider root has unit scale, Y=0, no Renderer and one invisible BoxCollider.
+The visual model owns its hover height; bob and bank never translate the rules root.
+Kinematic Rigidbody creation is safe in both runtime and editor configuration paths.
 The replaceable hovercraft visual uses 27 authored mesh parts: a lofted pressure
 hull, outriggers, armour, front deflector, rubber skirt, seat, console, headlamps,
 turbine collars, hover nozzles, jets and levitation coil. It includes a distinct
@@ -119,7 +175,9 @@ The setup menu locks pause/restart hotkeys and restores the prior pause state.
 
 The arena renderer consumes the selected simulation geometry. Goal thresholds,
 posts, contiguous corner walls, movement lane markings, corner launch nozzles,
-warning lamps, score readouts and eliminated-goal gates are live. Runtime PBR
+warning lamps, score readouts and eliminated-goal gates are live. The reference
+launcher's barrel/cradle uses the measured launch height. Restart clears pooled
+rings and ongoing audio; respawn resets launch, height and contact state. Runtime PBR
 materials, a generated brushed-panel texture, shadows, emissive lamps, ball seams,
 trails, pooled event-driven rings and authored synthetic audio replace the greybox.
 No art component creates a gameplay collider or changes a movement/spawn bound.

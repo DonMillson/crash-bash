@@ -7,7 +7,7 @@ namespace CrashBashRemake
     public class PrototypeBootstrap : MonoBehaviour
     {
         public ArkenoidVariant variant=ArkenoidVariant.BA;
-        public ArkenoidTuning ba=new ArkenoidTuning(), se=new ArkenoidTuning(), ng=new ArkenoidTuning(), pi=new ArkenoidTuning();
+        public ArkenoidTuning ba=ArkenoidTuning.CrashballReference(), se=new ArkenoidTuning(), ng=new ArkenoidTuning(), pi=new ArkenoidTuning();
         public List<PlayerSlot> players=new List<PlayerSlot> {
             new PlayerSlot{slotId=0,side=ArenaSide.Bottom,character=CharacterId.Crash,isHuman=true,inputIndex=0},
             new PlayerSlot{slotId=1,side=ArenaSide.Right,character=CharacterId.Tiny},

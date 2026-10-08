@@ -229,3 +229,37 @@ scale of 400 PS1 coordinate units per Unity unit keeps rendering independent.
 Original contour, goal aperture, ball parameters, action windows, RedKick meaning
 and variant/resource mapping remain open; the implementation labels those values
 as provisional. HLE observations still need an original-hardware cross-check.
+
+
+## Ball launch and kick experiments, 2026-10-08
+
+The running PS1 reference now provides numeric launch/bounce and Square-kick
+measurements in `PS1_Arkenoid_Runtime_Measurements.json`. The observed corner
+fires from (2048, -256, -2048). Initial current speed 32 approaches target 80 by
+4/update. The vertical trace fits initial upward speed 48, gravity 6/update,
+resting centre height 96 and .5 floor rebound, at the already observed 30Hz clock.
+
+Controlled RAM probes separate current speed from cruise target. Incoming
+current speeds 80, 100, 144, 160, 200 and 240 with target 144 yield 207 at the
+first affected Square-kick update. A static zero-current/zero-target ball yields
+68, then 72. This supports old cruise target +64 for the impulse, new target
+144, and ordinary speed approach +4/-1 each update. It is an inferred behavior
+model; no original function body has been recovered.
+
+Static-distance and fine-boundary probes reveal a growing, time-limited influence,
+not an instantaneous radius test. A fit uses base radius 384, growth 192/update,
+effective hit padding 24 and active updates 2..5. Distances 600 and 601, and 792
+and 793, are affected on different updates. 1177..1184 remain unaffected. Each
+ball receives one impulse from a kick. These values are fitted to Dingodile's
+observed action, and do not establish other characters' wave stats.
+
+The natural scoring interval is -2962..-3101. A 3072 threshold is a candidate
+only: controlled static and moving teleports across it did not score. Therefore
+exact scoring flags/contours remain open and the Unity goal plane is provisional.
+Other launches/RNG, cooldown, exact contact shape/angle, seven characters' stats,
+RedKick, special-object ownership and BA/SE/NG/PI geometry remain unconfirmed.
+
+Only measured numbers and conclusions are committed. Native core, ROM, RAM,
+savestates, screenshots and original audio/models stay private. Selected ball
+observations were transcribed from actual tool output after the local environment
+disconnected; unrecorded coordinates have not been invented.

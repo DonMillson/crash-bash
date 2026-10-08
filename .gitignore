@@ -23,3 +23,9 @@ __pycache__/
 *.pyc
 **/bin/
 **/obj/
+
+# Private emulator checkpoints and local tool/reference binaries.
+*.state
+*.sav
+*.dll
+*.so

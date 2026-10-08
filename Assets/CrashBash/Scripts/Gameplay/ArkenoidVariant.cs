@@ -16,6 +16,7 @@ namespace CrashBashRemake
         string LaunchEntryPoint { get; }
         ArkenoidObjectType DeadWallType { get; }
         float ClampHero(float lateral, ArkenoidArenaGeometry geometry);
+        float ClampHero(ArenaSide side, float lateral, ArkenoidArenaGeometry geometry);
         bool SweepBoundary(ArkVector point, ArkVector motion, ArkWallSegment wall,
             ArkenoidArenaGeometry geometry, out float time, out ArkVector normal);
         bool TestOutOfBounds(ArkVector point, ArkenoidArenaGeometry geometry);
@@ -42,6 +43,11 @@ namespace CrashBashRemake
         public virtual ArkenoidObjectType DeadWallType => ArkenoidObjectType.DeadWall;
         public virtual float ClampHero(float lateral, ArkenoidArenaGeometry geometry)
             => ArkMath.Clamp(lateral, -geometry.Tuning.defenderTravel, geometry.Tuning.defenderTravel);
+        public virtual float ClampHero(ArenaSide side, float lateral, ArkenoidArenaGeometry geometry)
+        {
+            geometry.DefenderLimits(side, out float minimum, out float maximum);
+            return ArkMath.Clamp(lateral, minimum, maximum);
+        }
         public virtual bool SweepBoundary(ArkVector point, ArkVector motion, ArkWallSegment wall,
             ArkenoidArenaGeometry geometry, out float time, out ArkVector normal)
             => ArkenoidArenaGeometry.SweepSegment(point, motion, geometry.Tuning.ballRadius, wall, out time, out normal);

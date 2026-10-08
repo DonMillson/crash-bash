@@ -26,6 +26,7 @@ namespace CrashBashRemake
         {
             var root = new GameObject("Hovercraft Visual — replaceable art").AddComponent<ArkenoidCraftVisual>();
             root.transform.SetParent(parent, false); root.hero = controller; root.accent = color;
+            root.transform.localPosition = new Vector3(0,.32f,0);
             root.yaw = side == ArenaSide.Top ? 180 : side == ArenaSide.Left ? 90 : side == ArenaSide.Right ? -90 : 0;
             var paint = r.Material("Craft paint " + side, color, .55f, .78f);
             var alloy = r.Material("Craft brushed alloy",new Color(.46f,.53f,.60f),.87f,.66f);
@@ -68,7 +69,7 @@ namespace CrashBashRemake
             float sinking=model.State==ArkenoidHeroState.Die ? Mathf.Clamp01(model.StateTime/.65f)*-.24f : 0;
             float lateral = Mathf.Lerp(model.PreviousLateral,model.Lateral,hero.PresentationAlpha)-model.Lateral;
             Vector3 smoothing = ArkenoidPlayerMotor.ToWorld(ArkenoidArenaGeometry.Tangent(model.Side)*lateral,0);
-            transform.localPosition=smoothing+new Vector3(0,-.055f+hover+sinking,0);
+            transform.localPosition=smoothing+new Vector3(0,.32f+hover+sinking,0);
             transform.localRotation=Quaternion.Euler(-recoil*9, yaw, -motion*9+(model.State==ArkenoidHeroState.Die?model.StateTime*80:0));
             float power=.85f+Mathf.Abs(motion)*.45f+recoil*.8f;
             for(int i=0;i<jets.Count;i++) jets[i].localScale=new Vector3(1,power,1);

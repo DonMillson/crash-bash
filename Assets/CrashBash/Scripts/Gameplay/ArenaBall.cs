@@ -16,7 +16,8 @@ namespace CrashBashRemake
         bool externalFreeze;
         MatchManager host;
         bool lastActive;
-        void Awake()
+        void Awake() { EnsureBody(); }
+        void EnsureBody()
         {
             body = GetComponent<Rigidbody>(); shape = GetComponent<SphereCollider>();
             body.isKinematic = true; body.useGravity = false; shape.isTrigger = true;
@@ -24,6 +25,7 @@ namespace CrashBashRemake
         }
         public void Configure(ArkenoidSimulation simulation, ArkBallModel model, Transform visualModel, MatchManager viewHost = null)
         {
+            EnsureBody();
             Simulation = simulation; Model = model; visual = visualModel; host = viewHost;
             launchSpeed = simulation.Tuning.launchSpeed; maxSpeed = simulation.Tuning.maxBallSpeed;
             shape.radius = simulation.Tuning.ballRadius;
@@ -36,12 +38,13 @@ namespace CrashBashRemake
             if (Model == null || !visual) return;
             float alpha = host ? host.PresentationAlpha : Simulation.InterpolationAlpha;
             ArkVector position = Model.PreviousPosition + (Model.Position - Model.PreviousPosition) * alpha;
-            visual.localPosition = ArkenoidPlayerMotor.ToWorld(position - Model.Position, 0);
+            visual.localPosition = ArkenoidPlayerMotor.ToWorld(position - Model.Position,
+                Mathf.Lerp(Model.PreviousHeight, Model.Height, alpha) - Model.Height);
         }
         public void SyncView(float seconds)
         {
             if (Model == null) return;
-            body.position = ArkenoidPlayerMotor.ToWorld(Model.Position, Simulation.Tuning.ballHeight);
+            body.position = ArkenoidPlayerMotor.ToWorld(Model.Position, Model.Height);
             if (trail && Model.Active && !lastActive) trail.Clear();
             lastActive = Model.Active;
             shape.enabled = Model.Active && Model.GrabOwnerSlot == -1;
@@ -64,7 +67,9 @@ namespace CrashBashRemake
             if (Model == null) return;
             Model.GrabOwnerSlot = -1; Model.Active = true;
             Model.Position = Model.PreviousPosition = ArkenoidPlayerMotor.ToPlane(origin);
+            Model.Height = Model.PreviousHeight = origin.y; Model.VerticalVelocity = 0; Model.LaunchTicksRemaining = 0;
             Model.Velocity = ArkenoidPlayerMotor.ToPlane(direction).Normalized * Mathf.Min(speed, maxSpeed);
+            Model.TargetSpeed = Model.Velocity.Length;
             if (trail) trail.Clear();
             SyncView(0);
         }

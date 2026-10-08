@@ -3,8 +3,8 @@ using System;
 namespace CrashBashRemake
 {
     /// <summary>
-    /// See Docs/PS1_Arkenoid_Runtime_Measurements.json for the measured Dingodile
-    /// movement override. Other character motion and all unmarked fields remain
+    /// See Docs/PS1_Arkenoid_Runtime_Measurements.json for scoped Dingodile motion,
+    /// ball launch, speed and fitted kick-wave observations. Other character motion and all unmarked fields remain
     /// provisional. Visuals must never mutate gameplay geometry.
     /// </summary>
     [Serializable]
@@ -15,11 +15,31 @@ namespace CrashBashRemake
         public float goalHalfWidth = 4.1f; // Provisional: must accommodate the measured travel lane.
         public float goalPlane = 6.35f;
         public float defenderLine = 5.44f; // Four observed PS1 defender lines: 2176 / chosen scale 400.
-        public float defenderTravel = 3f; // Dingodile observation: -1200..1201; symmetric approximation.
+        public float defenderTravel = 3f;
+        public float defenderPositiveCoordinateOverrun;
         public float defenderHalfWidth = .725f;
         public float defenderHalfDepth = .24f;
         public float ballRadius = .36f;
         public float ballHeight = .55f;
+        public float launcherHalfExtent = 5.12f;
+        public bool crashballLaunchArc;
+        public bool crashballBallSpeedReference;
+        public float launchHeight = .64f;
+        public float launchVerticalSpeed = 3.6f;
+        public float launchGravity = 13.5f;
+        public float launchBounce = .5f;
+        public float launchInitialSpeed = 2.4f;
+        public float launchAcceleration = 9f;
+        public int launchRampTicks = 12;
+        public float referenceDeflectSpeed = 10.8f;
+        public float referenceKickSpeedIncrement = 4.8f;
+        public float referenceBallSpeedDecay = 2.25f;
+        // Wave geometry is fitted to controlled Dingodile probes, not decoded constants.
+        public float referenceKickInitialRadius = .96f;
+        public float referenceKickRadiusGrowth = .48f;
+        public float referenceKickPadding = .06f;
+        public float referenceKickPushPadding = .005f;
+        public int referenceKickFirstActiveTick = 2, referenceKickLastActiveTick = 5;
         public float moveSpeed = 7.5f;
         public float boostMultiplier = 1.5f;
         public float moveAcceleration = 76.5f;
@@ -58,6 +78,16 @@ namespace CrashBashRemake
         public bool allowAttractForCalibration;
         public bool allowCornerPickupsForCalibration;
 
+        public static ArkenoidTuning CrashballReference() => new ArkenoidTuning {
+            crashballLaunchArc = true, crashballBallSpeedReference = true,
+            ballHeight = .24f, ballRadius = .24f, launchSpeed = 6f,
+            defenderPositiveCoordinateOverrun = .0025f,
+            // Radius inferred from resting centre height; collision radius is not decoded.
+            // Scoring was observed between 2962 and 3101 coordinate units.
+            // 3072 is a candidate threshold, not an exact decoded constant.
+            goalPlane = 7.68f
+        };
+
         public ArkMotionSettings MotionFor(CharacterId character)
         {
             if (characterMotion != null)
@@ -70,17 +100,29 @@ namespace CrashBashRemake
         public void Validate()
         {
             foreach (float value in new[] { wallHalfExtent, wallThickness, goalHalfWidth, goalPlane,
-                         defenderLine, defenderTravel, defenderHalfWidth, defenderHalfDepth, ballRadius,
+                         defenderLine, defenderTravel, defenderPositiveCoordinateOverrun, defenderHalfWidth, defenderHalfDepth, ballRadius,
                          ballHeight, moveSpeed, boostMultiplier, launchSpeed, maxBallSpeed, spawnInterval,
                          contactOffsetInfluence, contactMovementInfluence, kickMultiplier, repulseMultiplier,
-                         attractionAcceleration, grabReleaseSpeed, tauntSeconds, simulationTickSeconds })
+                         attractionAcceleration, grabReleaseSpeed, tauntSeconds, simulationTickSeconds,
+                         launcherHalfExtent, launchHeight, launchVerticalSpeed, launchGravity,
+                         launchBounce, launchInitialSpeed, launchAcceleration, referenceDeflectSpeed,
+                         referenceKickSpeedIncrement, referenceBallSpeedDecay, referenceKickInitialRadius,
+                         referenceKickRadiusGrowth, referenceKickPadding, referenceKickPushPadding })
                 if (!ArkMath.Finite(value)) throw new ArgumentException("Arkenoid settings must be finite.");
-            if (!(wallHalfExtent > goalHalfWidth && goalHalfWidth > defenderTravel + defenderHalfWidth &&
+            if (!(wallHalfExtent > goalHalfWidth && goalHalfWidth > defenderTravel + defenderPositiveCoordinateOverrun + defenderHalfWidth &&
                   goalPlane > wallHalfExtent && defenderLine < wallHalfExtent &&
-                  defenderTravel > 0 && defenderHalfWidth > 0 && defenderHalfDepth > 0 &&
+                  defenderTravel > 0 && defenderPositiveCoordinateOverrun >= 0 && defenderHalfWidth > 0 && defenderHalfDepth > 0 &&
                   ballRadius > 0 && wallThickness > 0 && ballHeight >= 0 && moveSpeed > 0 && boostMultiplier >= 1 &&
                   launchSpeed > 0 && maxBallSpeed >= launchSpeed && spawnInterval > 0 &&
                   kickMultiplier > 0 && repulseMultiplier > 0 && attractionAcceleration >= 0 &&
+                  launcherHalfExtent > 0 && launcherHalfExtent < wallHalfExtent - ballRadius &&
+                  launchHeight >= 0 && launchVerticalSpeed >= 0 && launchGravity > 0 && launchBounce >= 0 && launchBounce < 1 &&
+                  launchInitialSpeed > 0 && launchAcceleration >= 0 &&
+                  launchRampTicks > 0 && launchRampTicks <= 120 && referenceDeflectSpeed > 0 &&
+                  referenceKickSpeedIncrement > 0 && referenceBallSpeedDecay >= 0 &&
+                  referenceKickInitialRadius > 0 && referenceKickRadiusGrowth >= 0 && referenceKickPadding >= 0 && referenceKickPushPadding >= 0 &&
+                  referenceKickFirstActiveTick >= 1 && referenceKickLastActiveTick >= referenceKickFirstActiveTick &&
+                  referenceKickLastActiveTick <= 120 &&
                   grabReleaseSpeed > 0 && tauntSeconds >= 0 && simulationTickSeconds > 0 && simulationTickSeconds <= .1f &&
                   startingScore > 0 && winsNeeded > 0 && maxBalls >= 1 && maxBalls <= 32))
                 throw new ArgumentException("Invalid Arkenoid calibration geometry or match settings.");

@@ -78,9 +78,13 @@ namespace CrashBashRemake
                 // Launchers surround the playable corner; their nozzle matches the actual spawn point.
                 var root=new GameObject("Corner launcher "+corner);root.transform.SetParent(transform,false);root.transform.position=p;
                 var toward=new Vector3(-p.x,0,-p.z).normalized;root.transform.rotation=Quaternion.LookRotation(toward);
+                float nozzleHeight=t.crashballLaunchArc?t.launchHeight:t.ballHeight;
                 r.Part(root.transform,"Launcher pedestal",r.Mesh("Corner pedestal",ArkenoidMeshData.Cylinder(.42f,.10f,32)),new Vector3(0,.02f,-.48f),baseMetal);
-                r.Part(root.transform,"Launcher collar",r.Mesh("Corner launcher collar",ArkenoidMeshData.Torus(.21f,.065f)),new Vector3(0,t.ballHeight,-.31f),trim,Quaternion.Euler(90,0,0));
-                r.Part(root.transform,"Launcher dark bore",r.Mesh("Corner bore",ArkenoidMeshData.Cylinder(.15f,.12f,24)),new Vector3(0,t.ballHeight,-.32f),dark,Quaternion.Euler(90,0,0));
+                r.Part(root.transform,"Launcher barrel",r.Mesh("Corner barrel",ArkenoidMeshData.Cylinder(.24f,.48f,32)),new Vector3(0,nozzleHeight,-.50f),baseMetal,Quaternion.Euler(90,0,0));
+                r.Part(root.transform,"Launcher collar",r.Mesh("Corner launcher collar",ArkenoidMeshData.Torus(.21f,.065f)),new Vector3(0,nozzleHeight,-.31f),trim,Quaternion.Euler(90,0,0));
+                r.Part(root.transform,"Launcher dark bore",r.Mesh("Corner bore",ArkenoidMeshData.Cylinder(.15f,.12f,24)),new Vector3(0,nozzleHeight,-.32f),dark,Quaternion.Euler(90,0,0));
+                foreach(int sign in new[]{-1,1})
+                    r.Part(root.transform,"Launcher cradle",r.Mesh("Corner cradle",ArkenoidMeshData.Prism(.10f,nozzleHeight,.16f,.025f)),new Vector3(sign*.24f,nozzleHeight*.5f,-.50f),trim);
                 launcherGlow[corner]=r.Material("Corner warning "+corner,new Color(.08f,.75f,.83f),.3f,.8f,1);
                 r.Part(root.transform,"Warning lens",r.Mesh("Corner warning lens",ArkenoidMeshData.Ellipsoid(.13f,.08f,.13f)),new Vector3(0,.2f,-.49f),launcherGlow[corner]);
                 var lamp=new GameObject("Launch warning lamp");lamp.transform.SetParent(root.transform,false);lamp.transform.localPosition=new Vector3(0,.40f,-.49f);
@@ -91,9 +95,10 @@ namespace CrashBashRemake
             {
                 ArenaSide side=(ArenaSide)i;
                 var marker=new GameObject(side+" defender lane");marker.transform.SetParent(transform,false);
-                marker.transform.position=ArkenoidPlayerMotor.ToWorld(geometry.HeroPosition(side,0),.027f);
+                geometry.DefenderLimits(side,out float minimum,out float maximum);
+                marker.transform.position=ArkenoidPlayerMotor.ToWorld(geometry.HeroPosition(side,(minimum+maximum)*.5f),.027f);
                 marker.transform.rotation=Quaternion.LookRotation(ArkenoidPlayerMotor.ToWorld(ArkenoidArenaGeometry.Inward(side),0));
-                r.Part(marker.transform,"Travel lane",r.Mesh("Travel lane",ArkenoidMeshData.Prism(t.defenderTravel*2,.018f,.035f,.01f)),Vector3.zero,r.Material("Lane glow "+side,SideColors[i]*.6f,.4f,.6f,.5f));
+                r.Part(marker.transform,"Travel lane",r.Mesh("Travel lane",ArkenoidMeshData.Prism(maximum-minimum,.018f,.035f,.01f)),Vector3.zero,r.Material("Lane glow "+side,SideColors[i]*.6f,.4f,.6f,.5f));
             }
         }
         void LateUpdate()

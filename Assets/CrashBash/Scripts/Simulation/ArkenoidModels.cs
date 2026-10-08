@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace CrashBashRemake
 {
@@ -38,6 +39,7 @@ namespace CrashBashRemake
         internal float ActionCooldown, ActionTime, BotThinkTime, BotTarget;
         internal int GrabbedBallId = -1;
         internal ArkInput Input;
+        internal readonly HashSet<int> ActionInfluencedBalls = new HashSet<int>();
     }
 
     public sealed class ArkBallModel
@@ -45,6 +47,12 @@ namespace CrashBashRemake
         public int Id { get; internal set; }
         public ArkVector Position { get; internal set; }
         public ArkVector PreviousPosition { get; internal set; }
+        public float Height { get; internal set; }
+        public float PreviousHeight { get; internal set; }
+        public float TargetSpeed { get; internal set; }
+        internal float VerticalVelocity, LaunchCurrentSpeed;
+        internal int LaunchTicksRemaining;
+        internal ArkVector LaunchDirection, LaunchFinalVelocity;
         public ArkVector Velocity { get; internal set; }
         public int GrabOwnerSlot { get; internal set; } = -1;
         public int LastTouchSlot { get; internal set; } = -1;

@@ -17,7 +17,8 @@ namespace CrashBashRemake
         public static Vector3 ToWorld(ArkVector v, float height) => new Vector3(v.X, height, v.Y);
         public static ArkVector ToPlane(Vector3 v) => new ArkVector(v.x, v.z);
 
-        void Awake()
+        void Awake() { EnsureBody(); }
+        void EnsureBody()
         {
             body = GetComponent<Rigidbody>(); shape = GetComponent<BoxCollider>();
             body.isKinematic = true; body.useGravity = false;
@@ -27,18 +28,19 @@ namespace CrashBashRemake
         }
         public void Configure(ArkenoidSimulation sim, ArkHeroModel hero)
         {
+            EnsureBody();
             simulation = sim; model = hero; side = hero.Side;
             var t = sim.Tuning;
             bool horizontal = side == ArenaSide.Bottom || side == ArenaSide.Top;
             shape.size = horizontal ? new Vector3(t.defenderHalfWidth * 2, 1.05f, t.defenderHalfDepth * 2)
                 : new Vector3(t.defenderHalfDepth * 2, 1.05f, t.defenderHalfWidth * 2);
-            body.position = ToWorld(sim.Geometry.HeroPosition(side, hero.Lateral), t.ballHeight);
+            body.position = ToWorld(sim.Geometry.HeroPosition(side, hero.Lateral), 0);
         }
         public void SyncView()
         {
             if (model == null) return;
             shape.enabled = !model.IsEliminated;
-            Vector3 position = ToWorld(simulation.Geometry.HeroPosition(side, model.Lateral), simulation.Tuning.ballHeight);
+            Vector3 position = ToWorld(simulation.Geometry.HeroPosition(side, model.Lateral), 0);
             body.position = position;
         }
         // Compatibility entry points forward into the authoritative model; no second movement loop.

@@ -24,16 +24,8 @@
     "sprint_max_displacement_per_tick": 160,
     "released_input_deceleration_units_per_tick": 18,
     "defender_line_coordinate_magnitude": 2176,
-    "human_x_limits": [
-      -1200,
-      1201
-    ],
-    "four_hero_render_xyz_ram_offsets": [
-      "0x1D3040",
-      "0x1D341C",
-      "0x1D37F8",
-      "0x1D3BD4"
-    ],
+    "human_x_limits": [-1200,1201],
+    "four_hero_render_xyz_ram_offsets": ["0x1D3040","0x1D341C","0x1D37F8","0x1D3BD4"],
     "starting_points_per_defender": 15,
     "default_match_cups": 3,
     "original_buttons": {
@@ -47,79 +39,22 @@
     "Reason for +1201 right bound versus -1200 left bound",
     "Pressed reversal, releasing sprint while continuing direction, kick motion/state interaction",
     "Exact floor contour, collision radii, goal aperture and scoring plane",
-    "Ball speed, rebound angle, kick multiplier/window, spawn cadence/population cap",
     "Resource/overlay mapping of BA/SE/NG/PI and special object ownership",
-    "Original animation durations and poses; original bot logic"
+    "Original animation durations and poses; original bot logic",
+    "Other character kick-wave profiles, exact collision geometry/angles, action cooldown/durations and spawn cadence/population cap"
   ],
   "motion_traces": [
     {
       "name": "normal_left_from_rest",
-      "segments": [
-        {
-          "axis": -1,
-          "sprint": false,
-          "x_per_logic_tick": [
-            -34,
-            -102,
-            -204,
-            -308,
-            -412,
-            -516,
-            -620,
-            -724,
-            -828,
-            -932,
-            -1036,
-            -1140
-          ]
-        }
-      ]
+      "segments": [{"axis":-1,"sprint":false,"x_per_logic_tick":[-34,-102,-204,-308,-412,-516,-620,-724,-828,-932,-1036,-1140]}]
     },
     {
       "name": "normal_right_from_rest",
-      "segments": [
-        {
-          "axis": 1,
-          "sprint": false,
-          "x_per_logic_tick": [
-            34,
-            102,
-            204,
-            308,
-            412,
-            516,
-            620,
-            724,
-            828,
-            932,
-            1036,
-            1140
-          ]
-        }
-      ]
+      "segments": [{"axis":1,"sprint":false,"x_per_logic_tick":[34,102,204,308,412,516,620,724,828,932,1036,1140]}]
     },
     {
       "name": "sprint_left_from_rest_and_bound",
-      "segments": [
-        {
-          "axis": -1,
-          "sprint": true,
-          "x_per_logic_tick": [
-            -56,
-            -168,
-            -328,
-            -488,
-            -648,
-            -808,
-            -968,
-            -1128,
-            -1200,
-            -1200,
-            -1200,
-            -1200
-          ]
-        }
-      ]
+      "segments": [{"axis":-1,"sprint":true,"x_per_logic_tick":[-56,-168,-328,-488,-648,-808,-968,-1128,-1200,-1200,-1200,-1200]}]
     },
     {
       "name": "normal_run_then_release",
@@ -127,30 +62,12 @@
         {
           "axis": -1,
           "sprint": false,
-          "x_per_logic_tick": [
-            -34,
-            -102,
-            -204,
-            -308,
-            -412,
-            -516,
-            -620,
-            -724,
-            -828,
-            -932
-          ]
+          "x_per_logic_tick": [-34,-102,-204,-308,-412,-516,-620,-724,-828,-932]
         },
         {
           "axis": 0,
           "sprint": false,
-          "x_per_logic_tick": [
-            -1018,
-            -1086,
-            -1136,
-            -1168,
-            -1182,
-            -1182
-          ]
+          "x_per_logic_tick": [-1018,-1086,-1136,-1168,-1182,-1182]
         }
       ]
     },
@@ -160,31 +77,249 @@
         {
           "axis": -1,
           "sprint": true,
-          "x_per_logic_tick": [
-            -56,
-            -168,
-            -328,
-            -488
-          ]
+          "x_per_logic_tick": [-56,-168,-328,-488]
         },
         {
           "axis": 0,
           "sprint": false,
-          "x_per_logic_tick": [
-            -630,
-            -754,
-            -860,
-            -948,
-            -1018,
-            -1070,
-            -1104,
-            -1120,
-            -1120,
-            -1120
-          ]
+          "x_per_logic_tick": [-630,-754,-860,-948,-1018,-1070,-1104,-1120,-1120,-1120]
         }
       ]
     }
   ],
-  "archive_sha256": "3a02b477ab48ae99010e1a9db3b0d591c79e800b43d10779945ca18ab788acb7"
+  "archive_sha256": "3a02b477ab48ae99010e1a9db3b0d591c79e800b43d10779945ca18ab788acb7",
+  "ball_reference": {
+    "method": {
+      "position_ram_offset": "0x1D4064",
+      "physics_position_ram_offset": "0x1D425C",
+      "current_speed_u16_offset": "0x1D415A",
+      "cruise_target_speed_u16_offset": "0x1D4160",
+      "score_u16_offset": "0x0009AD74",
+      "speed_probes": "Restore the same incoming-ball checkpoint, alter only the current-speed u16, keep cruise target 144, hold Square.",
+      "radius_probes": "Restore checkpoint, set current/target speed to zero, place ball position copies at a chosen inward distance from P1, hold Square. Controlled RAM experiments; not naturally occurring game trajectories.",
+      "committed_sample_columns": ["video_callback","current_speed","cruise_target_if_recorded"],
+      "recovery": "Selected observations transcribed from actual tool output after the local environment went offline. Original motion traces are retained. No missing coordinates have been fabricated."
+    },
+    "observed": {
+      "first_corner_xyz": [2048,-256,-2048],
+      "idle_ball_xyz_in_checkpoint": [2048,-32,-2048],
+      "initial_ramp_target_speed": 80,
+      "current_speed_step_below_target": 4,
+      "current_speed_step_above_target": -1,
+      "post_kick_cruise_target": 144,
+      "kick_current_speed_after_first_update_with_target_144": 207,
+      "kick_current_speed_after_first_update_with_target_zero": 68,
+      "resting_render_y": -96,
+      "initial_vertical_velocity_before_gravity": -48,
+      "vertical_velocity_step": 6,
+      "bounce_coefficient_fit": 0.5,
+      "first_scoring_z_interval": [-3101,-2962],
+      "goal_plane_candidate": 3072
+    },
+    "limits": [
+      "First corner and one NTSC-U Dingodile VS run; other characters and variants are not independently calibrated.",
+      "Old cruise target plus 64, then cruise target 144 is an inference from combined current-speed and zero-target probes, not recovered function code.",
+      "Wave geometry/normalization and exact object collision radii remain unresolved; wave parameters are a fitted model.",
+      "3072 goal plane and radius 96 inferred from resting render height are candidates, not confirmed collision constants.",
+      "Full warning time, launch angle RNG, spawn interval and population cap remain unmeasured."
+    ],
+    "launch_arc_trace": {
+      "firing_xyz": [2048,-256,-2048],
+      "xyz_per_logic_tick_after_fire": [
+        [2023,-298,-2022],
+        [1995,-334,-1993],
+        [1964,-364,-1961],
+        [1931,-388,-1927],
+        [1895,-406,-1890],
+        [1856,-418,-1850],
+        [1814,-424,-1807],
+        [1769,-424,-1761],
+        [1721,-418,-1712],
+        [1671,-406,-1661],
+        [1618,-388,-1607],
+        [1562,-364,-1550],
+        [1490,-334,-1516],
+        [1418,-298,-1482],
+        [1346,-256,-1448],
+        [1274,-208,-1414],
+        [1202,-154,-1380],
+        [1130,-96,-1346],
+        [1058,-120,-1312],
+        [986,-138,-1278],
+        [914,-150,-1244],
+        [842,-156,-1210],
+        [770,-156,-1176],
+        [698,-150,-1142],
+        [626,-138,-1108],
+        [554,-120,-1074],
+        [482,-96,-1040],
+        [410,-102,-1006],
+        [338,-102,-972],
+        [266,-96,-938],
+        [194,-96,-904]
+      ]
+    },
+    "kick_current_speed_probes": [
+      {
+        "forced_incoming_speed": 80,
+        "samples": [[1,84,144],[3,88,144],[5,92,144],[7,207,144],[9,206,144],[11,205,144],[13,204,144],[15,203,144]]
+      },
+      {
+        "forced_incoming_speed": 100,
+        "samples": [[1,104,144],[3,108,144],[5,207,144],[7,206,144],[9,205,144],[11,204,144],[13,203,144],[15,202,144]]
+      },
+      {
+        "forced_incoming_speed": 144,
+        "samples": [[1,144,144],[3,144,144],[5,207,144],[7,206,144],[9,205,144],[11,204,144],[13,203,144],[15,202,144]]
+      },
+      {
+        "forced_incoming_speed": 160,
+        "samples": [[1,159,144],[3,158,144],[5,207,144],[7,206,144],[9,205,144],[11,204,144],[13,203,144],[15,202,144]]
+      },
+      {
+        "forced_incoming_speed": 200,
+        "samples": [[1,199,144],[3,198,144],[5,207,144],[7,206,144],[9,205,144],[11,204,144],[13,203,144],[15,202,144]]
+      },
+      {
+        "forced_incoming_speed": 240,
+        "samples": [[1,239,144],[3,238,144],[5,207,144],[7,206,144],[9,205,144],[11,204,144],[13,203,144],[15,202,144]]
+      }
+    ],
+    "kick_static_radius_probes": [
+      {
+        "forced_static_distance": 300,
+        "samples": [[1,4]]
+      },
+      {
+        "forced_static_distance": 400,
+        "samples": [[1,0],[3,68],[5,72],[7,76],[9,80],[11,84],[13,88],[15,92],[17,96]]
+      },
+      {
+        "forced_static_distance": 500,
+        "samples": [[1,0],[3,68]]
+      },
+      {
+        "forced_static_distance": 600,
+        "samples": [[1,0],[3,68],[5,72],[7,76],[9,80],[11,84],[13,88],[15,92],[17,96]]
+      },
+      {
+        "forced_static_distance": 700,
+        "samples": [[1,0],[3,0],[5,68],[7,72],[9,76],[11,80],[13,84],[15,88],[17,92]]
+      },
+      {
+        "forced_static_distance": 768,
+        "samples": [[1,0],[3,0],[5,68],[7,72],[9,76],[11,80],[13,84],[15,88],[17,92]]
+      },
+      {
+        "forced_static_distance": 800,
+        "samples": [[1,0],[3,0],[5,0],[7,68],[9,72],[11,76],[13,80],[15,84],[17,88]]
+      },
+      {
+        "forced_static_distance": 900,
+        "samples": [[1,0],[3,0],[5,0],[7,68]]
+      },
+      {
+        "forced_static_distance": 1000,
+        "samples": [[1,0],[3,0],[5,0],[7,0],[9,68],[11,72],[13,76],[15,80],[17,84]]
+      },
+      {
+        "forced_static_distance": 1200,
+        "samples": [[1,0],[3,0],[5,0],[7,0],[9,0],[11,0],[13,0],[15,0],[17,0]]
+      },
+      {
+        "forced_static_distance": 1400,
+        "samples": [[1,0],[3,0],[5,0],[7,0],[9,0],[11,0],[13,0],[15,0],[17,0]]
+      },
+      {
+        "forced_static_distance": 1600,
+        "samples": [[1,0],[3,0],[5,0],[7,0],[9,0],[11,0],[13,0],[15,0],[17,0]]
+      }
+    ],
+    "kick_fine_radius_probes": [
+      {
+        "distance": 601,
+        "first_hit": [5,68,[1201,-96,-1314]]
+      },
+      {
+        "distance": 602,
+        "first_hit": [5,68,[1201,-96,-1314]]
+      },
+      {
+        "distance": 603,
+        "first_hit": [5,68,[1201,-96,-1314]]
+      },
+      {
+        "distance": 607,
+        "first_hit": [5,68,[1201,-96,-1314]]
+      },
+      {
+        "distance": 608,
+        "first_hit": [5,68,[1201,-96,-1314]]
+      },
+      {
+        "distance": 609,
+        "first_hit": [5,68,[1201,-96,-1314]]
+      },
+      {
+        "distance": 793,
+        "first_hit": [7,68,[1201,-96,-1122]]
+      },
+      {
+        "distance": 794,
+        "first_hit": [7,68,[1201,-96,-1122]]
+      },
+      {
+        "distance": 795,
+        "first_hit": [7,68,[1201,-96,-1122]]
+      },
+      {
+        "distance": 799,
+        "first_hit": [7,68,[1201,-96,-1122]]
+      },
+      {
+        "distance": 800,
+        "first_hit": [7,68,[1201,-96,-1122]]
+      },
+      {
+        "distance": 1177,
+        "first_hit": null
+      },
+      {
+        "distance": 1178,
+        "first_hit": null
+      },
+      {
+        "distance": 1179,
+        "first_hit": null
+      },
+      {
+        "distance": 1183,
+        "first_hit": null
+      },
+      {
+        "distance": 1184,
+        "first_hit": null
+      }
+    ],
+    "passive_current_speed_observations": {
+      "initial_144": [144,144,144,144,144,144,144,144,144,144,144,144,144],
+      "forced_80": [84,88,92,96,100,104,108,112,116,120,124,128,132],
+      "forced_200": [199,198,197,196,195,194,193,192,191,190,189,188,187],
+      "forced_240": [239,238,237,236,235,234,233,232,231,230,229,228,227]
+    },
+    "normal_square_ab_run": {
+      "hero_xz": [1201,-2176],
+      "initial_ball_xz": [440,-1560],
+      "incoming_cruise_target": 144,
+      "square_samples": [[558,-96,-1643],[676,-96,-1726],[441,-96,-1523],[285,-96,-1388],[130,-96,-1254],[-24,-96,-1121],[-178,-96,-988]],
+      "no_square_samples": [[558,-96,-1643],[676,-96,-1726],[794,-96,-1809],[912,-96,-1892],[1030,-96,-1975],[874,-96,-1747],[840,-96,-1607]]
+    },
+    "goal_teleport_probe_limit": {
+      "stationary_z": [-2962,-3071,-3072,-3073,-3101],
+      "all_stationary_scores_after_tick": 15,
+      "moving": [[-3104,-3070,15],[-3105,-3071,15],[-3106,-3072,15],[-3107,-3073,15],[-3200,-3166,15]],
+      "moving_columns": ["forced_z","rendered_z_after_tick","score"],
+      "conclusion": "Neither stationary nor moving teleport reproduced the natural goal. Scoring requires trajectory/state flags; these probes do not confirm a simple 3072 cutoff."
+    }
+  }
 }

@@ -1,0 +1,20 @@
+name: Arkenoid simulation
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+        with:
+          dotnet-version: 8.0.x
+      - name: ISO traversal regressions
+        run: python -m unittest discover -s tools -p 'test_*.py'
+      - name: Compile and exercise actual Arkenoid simulation sources
+        run: python tools/run_headless_tests.py --dotnet "$(command -v dotnet)"

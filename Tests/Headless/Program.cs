@@ -61,9 +61,118 @@ static class Program
         Check(a.TickNumber == b.TickNumber && Math.Abs(a.Hero(2).Lateral-b.Hero(2).Lateral)<.0001f,
             "movement depended on host update frequency");
     }
+    static ArkenoidSimulation ReferenceScenario()
+    {
+        var tuning = ArkenoidTuning.CrashballReference();
+        tuning.countdownSeconds = 0; tuning.maxBallSpeed = 30;
+        var roster = Roster(); roster[0].Character = CharacterId.Dingodile;
+        var sim = new ArkenoidSimulation(tuning, new BAArkenoidRules(), roster);
+        sim.Step(tuning.simulationTickSeconds);
+        return sim;
+    }
+    static void MeasuredBalls()
+    {
+        using var evidence = System.Text.Json.JsonDocument.Parse(System.IO.File.ReadAllText("Docs/PS1_Arkenoid_Runtime_Measurements.json"));
+        var reference = evidence.RootElement.GetProperty("ball_reference");
+        var arc = ReferenceScenario(); var launched = arc.Balls[0];
+        Check(Math.Abs(launched.Position.X * 400) == 2048 && Math.Abs(launched.Position.Y * 400) == 2048,
+            "PS1 corner launcher coordinates");
+        int sample = 0;
+        foreach (var point in reference.GetProperty("launch_arc_trace").GetProperty("xyz_per_logic_tick_after_fire").EnumerateArray())
+        {
+            arc.Step(arc.Tuning.simulationTickSeconds);
+            Check(Math.Abs(launched.Height * 400 + point[1].GetInt32()) < .01f,
+                "PS1 launch/bounce height mismatch at sample " + sample++);
+        }
+        foreach (var probe in reference.GetProperty("kick_current_speed_probes").EnumerateArray())
+        {
+            var sim = ReferenceScenario(); sim.Balls[0].Active = false; sim.Balls[0].RespawnTime = 100;
+            var hero = sim.Hero(2); hero.Lateral = hero.PreviousLateral = 1201 / 400f;
+            float originalSpeed = probe.GetProperty("forced_incoming_speed").GetSingle();
+            var ball = sim.AddBall(new ArkVector(440 / 400f, -1560 / 400f),
+                new ArkVector(118, -83).Normalized * (originalSpeed * 30 / 400));
+            ball.TargetSpeed = 144 * 30 / 400f;
+            sim.SetInput(2, new ArkInput { KickPressed = true });
+            // The committed fixture contains the selected odd video callbacks.
+            // Each adjacent row is one measured 30Hz game update, not two updates.
+            foreach (var point in probe.GetProperty("samples").EnumerateArray())
+            {
+                sim.Step(sim.Tuning.simulationTickSeconds);
+                Check(Math.Abs(ball.Velocity.Length * 400 / 30 - point[1].GetInt32()) < .05f,
+                    "PS1 kick current/cruise speed mismatch: incoming " + originalSpeed + ", callback " + point[0].GetInt32());
+            }
+        }
+        foreach (var probe in reference.GetProperty("kick_static_radius_probes").EnumerateArray())
+        {
+            float distance = probe.GetProperty("forced_static_distance").GetSingle();
+            if (distance == 300) continue; // Original passive-overlap geometry is unresolved.
+            var sim = ReferenceScenario(); sim.Balls[0].Active = false; sim.Balls[0].RespawnTime = 100;
+            var hero = sim.Hero(2); hero.Lateral = hero.PreviousLateral = 1201 / 400f;
+            var ball = sim.AddBall(new ArkVector(1201 / 400f, (-2176 + distance) / 400f), new ArkVector());
+            ball.TargetSpeed = 0;
+            sim.SetInput(2, new ArkInput { KickPressed = true });
+            foreach (var point in probe.GetProperty("samples").EnumerateArray())
+            {
+                sim.Step(sim.Tuning.simulationTickSeconds);
+                Check(Math.Abs(ball.Velocity.Length * 400 / 30 - point[1].GetInt32()) < .05f,
+                    "PS1 kick influence window mismatch: distance " + distance + ", callback " + point[0].GetInt32());
+            }
+        }
+        foreach (var probe in reference.GetProperty("kick_fine_radius_probes").EnumerateArray())
+        {
+            float distance = probe.GetProperty("distance").GetSingle();
+            var sim = ReferenceScenario(); sim.Balls[0].Active = false; sim.Balls[0].RespawnTime = 100;
+            var hero = sim.Hero(2); hero.Lateral = hero.PreviousLateral = 1201 / 400f;
+            var ball = sim.AddBall(new ArkVector(1201 / 400f, (-2176 + distance) / 400f), new ArkVector());
+            ball.TargetSpeed = 0; sim.SetInput(2, new ArkInput { KickPressed = true });
+            int firstHit = 0;
+            for (int tick = 1; tick <= 6; tick++)
+            {
+                sim.Step(sim.Tuning.simulationTickSeconds);
+                if (ball.LastTouchSlot == 2 && firstHit == 0) firstHit = tick;
+            }
+            var expected = probe.GetProperty("first_hit");
+            int expectedTick = expected.ValueKind == System.Text.Json.JsonValueKind.Null ? 0 : (expected[0].GetInt32() + 1) / 2;
+            Check(firstHit == expectedTick, "PS1 kick fine radius boundary: " + distance);
+        }
+        var containment = ReferenceScenario(); containment.Balls[0].Active = false; containment.Balls[0].RespawnTime = 100;
+        containment.Hero(2).Lateral = containment.Hero(2).PreviousLateral = 1201 / 400f;
+        var corner = containment.AddBall(new ArkVector(5.5f, -4.7f), new ArkVector());
+        corner.TargetSpeed = 0; containment.SetInput(2, new ArkInput { KickPressed = true });
+        for (int i = 0; i < 5; i++) containment.Step(containment.Tuning.simulationTickSeconds);
+        Check(corner.Position.X <= containment.Tuning.wallHalfExtent - containment.Tuning.ballRadius + .002f && corner.Velocity.X < 0,
+            "kick wave separation tunneled through corner wall");
+
+        var delayed = Start(); var incoming = delayed.AddBall(new ArkVector(0, -3.1f), new ArkVector(0, -8));
+        delayed.SetInput(2, new ArkInput { KickPressed = true }); delayed.Step(delayed.Tuning.simulationTickSeconds);
+        Check(incoming.Velocity.Y < 0, "incoming ball was already in action range");
+        for (int i = 0; i < 5; i++) delayed.Step(delayed.Tuning.simulationTickSeconds);
+        Check(incoming.LastTouchSlot == 2 && incoming.Velocity.Y > 0, "kick action window ignored a later arriving ball");
+        Check(incoming.Velocity.Length < 11, "one kick applied multiple impulses to the same ball");
+
+        var soak = Start(ArkenoidTuning.CrashballReference(), true);
+        int goals = 0, eliminations = 0, rounds = 0, peak = 0;
+        for (int i = 0; i < 12000; i++)
+        {
+            soak.Step(.02f); peak = Math.Max(peak, soak.Balls.Count);
+            foreach (ArkEvent ev in soak.Events)
+            {
+                if (ev.Kind == ArkEventKind.Goal) goals++;
+                if (ev.Kind == ArkEventKind.Eliminated) eliminations++;
+                if (ev.Kind == ArkEventKind.RoundWon) rounds++;
+            }
+            foreach (ArkBallModel ball in soak.Balls)
+                Check(!float.IsNaN(ball.Position.X) && !float.IsNaN(ball.Position.Y) && !float.IsNaN(ball.Height) &&
+                    ball.Height >= soak.Tuning.ballHeight - .0001f && ball.Velocity.Length <= soak.Tuning.maxBallSpeed + .01f,
+                    "reference ball became invalid during bot game");
+        }
+        Check(goals > 20 && eliminations > 0 && rounds > 0 && peak > 1, "reference bot game did not exercise scoring, elimination and multiple balls");
+        Console.WriteLine($"Reference bot game: {goals} goals, {eliminations} eliminations, {rounds} round wins, peak {peak} balls in 240 simulated seconds.");
+    }
     static void Main(string[] args)
     {
         MeasuredMotion();
+        MeasuredBalls();
         foreach (ArkCraftPart part in ArkenoidCraftRecipe.Create())
         {
             double volume = 0;
@@ -101,6 +210,26 @@ static class Program
         Check(sim.Hero(2).State == ArkenoidHeroState.Dead && sim.Hero(1).State == ArkenoidHeroState.Winner, "terminal states not advanced");
         sim.ResetMatch();
         Check(sim.Balls.Count == 0 && sim.Hero(2).Lives == 1 && sim.Hero(1).Wins == 0 && sim.Hero(2).State == ArkenoidHeroState.Idle, "reset leaked round state");
+        sim = Start(new ArkenoidTuning { startingScore = 1, winsNeeded = 3, countdownSeconds = 0, roundResultSeconds = .05f });
+        for (int round = 1; round <= 3; round++)
+        {
+            foreach (ArenaSide side in new[] { ArenaSide.Bottom, ArenaSide.Right, ArenaSide.Top })
+            {
+                var b = sim.AddBall(sim.Geometry.SidePoint(side, 0, sim.Tuning.goalPlane), -ArkenoidArenaGeometry.Inward(side) * 8);
+                sim.TryScore(side, b);
+            }
+            Check(sim.Hero(1).Wins == round, "round win was not accumulated");
+            if (round < 3)
+            {
+                sim.Step(.11f);
+                Check(sim.Phase == ArkenoidMatchPhase.Playing && sim.RoundNumber == round + 1 && sim.Hero(2).Lives == 1,
+                    "round transition did not reset life or resume play");
+            }
+        }
+        Check(sim.Phase == ArkenoidMatchPhase.MatchResult && sim.MatchWinnerSlot == 1, "three-round match did not finish");
+        sim.ResetMatch();
+        Check(sim.TickNumber == 0 && sim.ElapsedTime == 0 && sim.Hero(1).Wins == 0, "match restart did not reset clock or wins");
+
 
         sim = Start(new ArkenoidTuning { startingScore = 1 });
         var deadGoal = sim.AddBall(sim.Geometry.SidePoint(ArenaSide.Bottom, 0, sim.Tuning.goalPlane), new ArkVector(0, -8));
@@ -141,6 +270,6 @@ static class Program
                 Check(sim.Balls.Count <= 5, "ball population exceeded cap");
             }
         }
-        Console.WriteLine($"PASS: {assertions} assertions; measured PS1 Dingodile traces, 30Hz input/clock, identity, goals, death walls, reset, swept contacts, grab, four variant dispatches, seeded bot soak.");
+        Console.WriteLine($"PASS: {assertions} assertions; measured PS1 Dingodile motion/ball/wave traces, three-round match, 30Hz input/clock, identity, goals, death walls, reset, swept contacts, grab, four variant dispatches, seeded bot soak.");
     }
 }

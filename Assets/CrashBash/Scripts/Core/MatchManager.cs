@@ -18,6 +18,7 @@ namespace CrashBashRemake
         public float PresentationAlpha => Simulation == null ? 1 : Paused ? 1 : Mathf.Clamp01(
             Simulation.InterpolationAlpha + (Time.time - presentationTime) / Simulation.Tuning.simulationTickSeconds);
         public event Action<ArkEvent> GameplayEvent;
+        public event Action MatchRestarted;
         readonly Dictionary<int, ArenaBall> views = new Dictionary<int, ArenaBall>();
         Func<ArkBallModel, ArenaBall> ballFactory;
         ArkenoidEnvironment environment;
@@ -89,6 +90,7 @@ namespace CrashBashRemake
         {
             if (Simulation == null) return;
             Simulation.ResetMatch(); environment.Restart();
+            MatchRestarted?.Invoke(); presentationTime = Time.time;
             foreach (PlayerSlot slot in slots) slot.hero.ResetController();
             SetPaused(false); SyncViews(0);
         }

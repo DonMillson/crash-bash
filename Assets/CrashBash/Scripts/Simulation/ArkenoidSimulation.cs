@@ -5,8 +5,8 @@ namespace CrashBashRemake
 {
     /// <summary>
     /// Shared Arkenoid gameplay. Unity supplies inputs and renders models; it does
-    /// not run a second PhysX ruleset. A 30Hz tick and scoped Dingodile motion are
-    /// measured; other numerical behavior remains provisional.
+    /// not run a second PhysX ruleset. A 30Hz tick, Dingodile motion and scoped ball/wave traces are
+    /// measured; unmarked numerical behavior remains provisional.
     /// </summary>
     public sealed class ArkenoidSimulation
     {
@@ -91,6 +91,7 @@ namespace CrashBashRemake
                 hero.Lateral = hero.PreviousLateral = hero.Velocity = hero.MotorVelocity = 0;
                 hero.ActionCooldown = hero.ActionTime = hero.BotThinkTime = hero.BotTarget = 0;
                 hero.RepulseCharges = 0; hero.GrabbedBallId = -1; hero.Input = new ArkInput();
+                hero.ActionInfluencedBalls.Clear();
                 hero.State = ArkenoidHeroState.Idle; hero.StateTime = 0;
             }
             Array.Clear(pickupCooldown, 0, pickupCooldown.Length);
@@ -129,7 +130,8 @@ namespace CrashBashRemake
                 return;
             }
 
-            foreach (ArkBallModel ball in balls) ball.PreviousPosition = ball.Position;
+            foreach (ArkBallModel ball in balls)
+            { ball.PreviousPosition = ball.Position; ball.PreviousHeight = ball.Height; }
             foreach (ArkHeroModel hero in heroes) MoveHero(hero, seconds);
             foreach (ArkHeroModel hero in heroes) HandleActions(hero, seconds);
             for (int i = 0; i < balls.Count && Phase == ArkenoidMatchPhase.Playing; i++) UpdateBall(balls[i], seconds);
@@ -173,7 +175,7 @@ namespace CrashBashRemake
             float ramp = axis == 0 ? motion.deceleration : hero.Input.Boost ? motion.sprintAcceleration : motion.acceleration;
             hero.MotorVelocity = ArkMath.MoveTowards(hero.MotorVelocity, targetSpeed, ramp * dt);
             float desired = hero.Lateral + hero.MotorVelocity * dt;
-            hero.Lateral = Rules.ClampHero(desired, Geometry);
+            hero.Lateral = Rules.ClampHero(hero.Side, desired, Geometry);
             hero.Velocity = (hero.Lateral - hero.PreviousLateral) / dt;
             if (hero.Lateral != desired) hero.MotorVelocity = 0;
             if (hero.ActionTime <= 0 && hero.GrabbedBallId < 0)
@@ -218,12 +220,15 @@ namespace CrashBashRemake
                     {
                         ball.GrabOwnerSlot = hero.SlotId; ball.LastTouchSlot = hero.SlotId;
                         hero.GrabbedBallId = ball.Id; ball.Velocity = new ArkVector(); ball.Position = ball.PreviousPosition = anchor;
+                        ball.Height = ball.PreviousHeight = Tuning.ballHeight; ball.VerticalVelocity = 0; ball.LaunchTicksRemaining = 0;
                         events.Add(new ArkEvent(ArkEventKind.Grab, anchor, hero.SlotId, ball.Id)); break;
                     }
                     ball.Velocity = Limit(ball.Velocity + pull.Normalized * Tuning.attractionAcceleration * dt);
                 }
                 return;
             }
+            if (hero.ActionTime > 0 && (hero.State == ArkenoidHeroState.Kick || hero.State == ArkenoidHeroState.RedKick))
+            { ApplyActionWindow(hero); return; }
             if (hero.ActionCooldown > 0) return;
             if (hero.Input.RepulsePressed && hero.RepulseCharges > 0)
             {
@@ -231,26 +236,64 @@ namespace CrashBashRemake
                 // Provisional animation binding; RedKick semantics are not established by declarations.
                 SetState(hero, ArkenoidHeroState.RedKick);
                 hero.ActionTime = Tuning.kickAnimationSeconds; hero.ActionCooldown = Tuning.kickCooldown;
-                foreach (ArkBallModel ball in balls)
-                    if (Influencable(hero, ball, Tuning.repulseRadius))
-                        KickBall(ball, (ball.Position - HeroPosition(hero)).Normalized, Tuning.repulseMultiplier, hero.SlotId);
+                hero.ActionInfluencedBalls.Clear(); ApplyActionWindow(hero);
                 events.Add(new ArkEvent(ArkEventKind.Repulse, HeroPosition(hero), hero.SlotId));
             }
             else if (hero.Input.KickPressed)
             {
                 SetState(hero, ArkenoidHeroState.Kick);
                 hero.ActionTime = Tuning.kickAnimationSeconds; hero.ActionCooldown = Tuning.kickCooldown;
-                foreach (ArkBallModel ball in balls)
-                    if (Influencable(hero, ball, Tuning.kickRadius))
-                    {
-                        float offset = Geometry.Lateral(hero.Side, ball.Position - HeroPosition(hero));
-                        ArkVector shot = inward + ArkenoidArenaGeometry.Tangent(hero.Side) * (offset / Tuning.kickRadius * .5f);
-                        KickBall(ball, shot, Tuning.kickMultiplier, hero.SlotId);
-                    }
+                hero.ActionInfluencedBalls.Clear(); ApplyActionWindow(hero);
                 events.Add(new ArkEvent(ArkEventKind.Kick, HeroPosition(hero), hero.SlotId));
             }
             else if (hero.Input.TauntPressed)
             { SetState(hero, ArkenoidHeroState.Taunt); hero.ActionTime = Tuning.tauntSeconds; }
+        }
+
+        void ApplyActionWindow(ArkHeroModel hero)
+        {
+            bool repulse = hero.State == ArkenoidHeroState.RedKick;
+            float radius = repulse ? Tuning.repulseRadius : Tuning.kickRadius;
+            bool referenceWave = !repulse && Tuning.crashballBallSpeedReference;
+            if (referenceWave)
+            {
+                int tick = 1 + (int)Math.Round(hero.StateTime / Tuning.simulationTickSeconds);
+                if (tick < Tuning.referenceKickFirstActiveTick || tick > Tuning.referenceKickLastActiveTick) return;
+                radius = Tuning.referenceKickInitialRadius + Tuning.referenceKickRadiusGrowth * (tick - 1) + Tuning.referenceKickPadding;
+            }
+            foreach (ArkBallModel ball in balls)
+            {
+                if (!Influencable(hero, ball, radius + .000002f) || !hero.ActionInfluencedBalls.Add(ball.Id)) continue;
+                ArkVector relative = ball.Position - HeroPosition(hero);
+                if (referenceWave)
+                {
+                    // Probes distinguish current speed from cruise target: Kick sets
+                    // old target + 64 PS1 units/tick, then switches cruise target to 144.
+                    // Other character wave geometry still uses this provisional fallback.
+                    ball.Velocity = relative.Normalized * Math.Min(Tuning.maxBallSpeed, ball.TargetSpeed + Tuning.referenceKickSpeedIncrement);
+                    ball.TargetSpeed = Tuning.referenceDeflectSpeed;
+                    AdvanceInfluencedBall(ball, HeroPosition(hero) + relative.Normalized * (radius + Tuning.referenceKickPushPadding));
+                    ball.LastTouchSlot = hero.SlotId; ball.LaunchTicksRemaining = 0;
+                }
+                else KickBall(ball, relative.Normalized, repulse ? Tuning.repulseMultiplier : Tuning.kickMultiplier, hero.SlotId);
+            }
+        }
+
+        void AdvanceInfluencedBall(ArkBallModel ball, ArkVector target)
+        {
+            // A growing wave may reach a corner or a closed goal. Preserve swept
+            // containment when applying its separation, not just on the next tick.
+            ArkVector motion = target - ball.Position, normal = new ArkVector();
+            float earliest = 1.0001f;
+            foreach (ArkWallSegment wall in Geometry.Walls(heroes))
+                if (Rules.SweepBoundary(ball.Position,motion,wall,Geometry,out float time,out ArkVector hit) && time < earliest)
+                { earliest = time; normal = hit; }
+            if (earliest <= 1)
+            {
+                ball.Position += motion * earliest + normal * .001f;
+                ball.Velocity = ArkVector.Reflect(ball.Velocity,normal);
+            }
+            else ball.Position = target;
         }
 
         public void KickBall(ArkBallModel ball, ArkVector direction, float multiplier, int slot = -1)
@@ -258,6 +301,7 @@ namespace CrashBashRemake
             if (ball == null || !ball.Active || ball.GrabOwnerSlot != -1) return;
             float speed = Math.Min(Tuning.maxBallSpeed, Math.Max(Tuning.launchSpeed, ball.Velocity.Length) * multiplier);
             ball.Velocity = direction.Normalized * speed; ball.LastTouchSlot = slot;
+            ball.LaunchTicksRemaining = 0;
         }
         void FreeGrabbedObject(ArkHeroModel hero, bool fire)
         {
@@ -271,6 +315,7 @@ namespace CrashBashRemake
             ball.ContactImmunity = .08f; ball.LastCollisionSlot = hero.SlotId;
             if (fire)
             {
+                hero.ActionInfluencedBalls.Clear(); hero.ActionInfluencedBalls.Add(ball.Id);
                 SetState(hero, ArkenoidHeroState.Kick); hero.ActionTime = Tuning.kickAnimationSeconds;
                 hero.ActionCooldown = Tuning.kickCooldown;
                 events.Add(new ArkEvent(ArkEventKind.Release, ball.Position, hero.SlotId, ball.Id));
@@ -281,7 +326,9 @@ namespace CrashBashRemake
         {
             if (!ArkMath.Finite(position.X) || !ArkMath.Finite(position.Y) || !ArkMath.Finite(velocity.X) || !ArkMath.Finite(velocity.Y))
                 throw new ArgumentException("Ball data must be finite.");
-            var ball = new ArkBallModel { Id = nextBallId++, Position = position, PreviousPosition = position, Velocity = Limit(velocity), Scores = scores };
+            var ball = new ArkBallModel { Id = nextBallId++, Position = position, PreviousPosition = position,
+                Height = Tuning.ballHeight, PreviousHeight = Tuning.ballHeight, TargetSpeed = Tuning.launchSpeed,
+                Velocity = Limit(velocity), Scores = scores };
             balls.Add(ball); return ball;
         }
         ArkVector Limit(ArkVector velocity) => velocity.LengthSquared > Tuning.maxBallSpeed * Tuning.maxBallSpeed
@@ -292,6 +339,11 @@ namespace CrashBashRemake
             if (!Rules.TestLaunchBounds(origin, Geometry)) origin = new ArkVector();
             ArkVector target = new ArkVector((float)random.NextDouble() * 3 - 1.5f, (float)random.NextDouble() * 3 - 1.5f);
             ball.Position = ball.PreviousPosition = origin; ball.Velocity = (target - origin).Normalized * Tuning.launchSpeed;
+            ball.Height = ball.PreviousHeight = Tuning.crashballLaunchArc ? Tuning.launchHeight : Tuning.ballHeight;
+            ball.VerticalVelocity = Tuning.crashballLaunchArc ? Tuning.launchVerticalSpeed : 0;
+            ball.LaunchTicksRemaining = Tuning.crashballLaunchArc ? Tuning.launchRampTicks : 0;
+            ball.LaunchCurrentSpeed = Tuning.launchInitialSpeed; ball.TargetSpeed = Tuning.launchSpeed;
+            ball.LaunchDirection = (-origin).Normalized; ball.LaunchFinalVelocity = ball.Velocity;
             ball.Active = true; ball.GrabOwnerSlot = -1; ball.LastTouchSlot = -1;
             ball.RespawnTime = ball.ContactImmunity = 0; ball.LastCollisionSlot = -1;
             events.Add(new ArkEvent(ArkEventKind.BallLaunched, origin, ball: ball.Id, corner: corner));
@@ -328,6 +380,13 @@ namespace CrashBashRemake
                 return;
             }
             if (ball.GrabOwnerSlot != -1) return;
+            if (Tuning.crashballLaunchArc) UpdateLaunchMotion(ball, dt);
+            if (Tuning.crashballBallSpeedReference && ball.LaunchTicksRemaining == 0 && ball.Velocity.LengthSquared > .00001f)
+            {
+                float current = ball.Velocity.Length;
+                float change = current < ball.TargetSpeed ? Tuning.launchAcceleration : Tuning.referenceBallSpeedDecay;
+                ball.Velocity = ball.Velocity.Normalized * ArkMath.MoveTowards(current, ball.TargetSpeed, change * dt);
+            }
             ball.ContactImmunity = Math.Max(0, ball.ContactImmunity - dt);
             float remaining = dt;
             // Swept contacts avoid tunnelling at kick speed and handle more than one bounce in a tick.
@@ -376,6 +435,7 @@ namespace CrashBashRemake
                         float offset = Geometry.Lateral(hitHero.Side, ball.Position - contactCentre) / (Tuning.defenderHalfWidth + Tuning.ballRadius);
                         float influence = offset * Tuning.contactOffsetInfluence + hitHero.Velocity * Tuning.contactMovementInfluence;
                         ball.Velocity = (inward + ArkenoidArenaGeometry.Tangent(hitHero.Side) * influence).Normalized * ball.Velocity.Length;
+                        if (Tuning.crashballBallSpeedReference) ball.TargetSpeed = Tuning.referenceDeflectSpeed;
                     }
                     else ball.Velocity = ArkVector.Reflect(ball.Velocity, hitNormal);
                     ball.LastTouchSlot = ball.LastCollisionSlot = hitHero.SlotId; ball.ContactImmunity = .04f;
@@ -387,6 +447,27 @@ namespace CrashBashRemake
             }
             if (Rules.TestOutOfBounds(ball.Position, Geometry))
             { ball.Active = false; ball.RespawnTime = Tuning.scoredBallDelay; }
+        }
+
+        void UpdateLaunchMotion(ArkBallModel ball, float dt)
+        {
+            if (ball.LaunchTicksRemaining > 0)
+            {
+                ball.LaunchCurrentSpeed = Math.Min(Tuning.launchSpeed, ball.LaunchCurrentSpeed + Tuning.launchAcceleration * dt);
+                ball.Velocity = ball.LaunchDirection * ball.LaunchCurrentSpeed;
+                if (--ball.LaunchTicksRemaining == 0) ball.LaunchTicksRemaining = -1;
+            }
+            else if (ball.LaunchTicksRemaining == -1)
+            { ball.Velocity = ball.LaunchFinalVelocity; ball.LaunchTicksRemaining = 0; }
+            if (ball.Height <= Tuning.ballHeight && ball.VerticalVelocity == 0) return;
+            ball.VerticalVelocity -= Tuning.launchGravity * dt;
+            ball.Height += ball.VerticalVelocity * dt;
+            if (ball.Height <= Tuning.ballHeight + .000001f)
+            {
+                ball.Height = Tuning.ballHeight;
+                ball.VerticalVelocity = Math.Abs(ball.VerticalVelocity) * Tuning.launchBounce;
+                if (ball.VerticalVelocity <= Tuning.launchGravity * dt) ball.VerticalVelocity = 0;
+            }
         }
 
         public bool TryScore(ArenaSide side, ArkBallModel ball)
@@ -442,7 +523,7 @@ namespace CrashBashRemake
                 hero.BotTarget = 0;
                 foreach (ArkBallModel ball in balls)
                     if (PredictDanger(hero, ball, out float time, out float target) && time < dangerTime)
-                    { dangerTime = time; hero.BotTarget = Rules.ClampHero(target, Geometry); }
+                    { dangerTime = time; hero.BotTarget = Rules.ClampHero(hero.Side, target, Geometry); }
                 hero.BotThinkTime = Tuning.botReactionSeconds + hero.SlotId * .015f;
             }
             foreach (ArkBallModel ball in balls)

@@ -37,6 +37,14 @@ namespace CrashBashRemake
             => SidePoint(side, lateral, Tuning.defenderLine);
         public float Lateral(ArenaSide side, ArkVector point) => ArkVector.Dot(point, Tangent(side));
         public float OutwardDistance(ArenaSide side, ArkVector point) => ArkVector.Dot(point, -Inward(side));
+        public void DefenderLimits(ArenaSide side, out float minimum, out float maximum)
+        {
+            minimum = -Tuning.defenderTravel; maximum = Tuning.defenderTravel;
+            // Observed asymmetry is in the positive world coordinate, not tied to
+            // a player slot. Other sides still need an independent reference trace.
+            if (side == ArenaSide.Bottom || side == ArenaSide.Right) maximum += Tuning.defenderPositiveCoordinateOverrun;
+            else minimum -= Tuning.defenderPositiveCoordinateOverrun;
+        }
 
         public IEnumerable<ArkWallSegment> Walls(IReadOnlyList<ArkHeroModel> heroes)
         {
@@ -54,7 +62,7 @@ namespace CrashBashRemake
 
         public ArkVector CornerPosition(int corner)
         {
-            float d = Tuning.wallHalfExtent - Tuning.ballRadius - .65f;
+            float d = Tuning.launcherHalfExtent;
             return new ArkVector((corner == 0 || corner == 3) ? -d : d, corner < 2 ? -d : d);
         }
         public bool InsideLaunchBounds(ArkVector point) =>
