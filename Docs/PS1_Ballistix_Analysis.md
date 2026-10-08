@@ -61,3 +61,40 @@ Next reverse-engineering targets:
 5. recreate visible assets with new meshes/materials while preserving gameplay dimensions.
 
 No ROM/ISO assets are redistributed in this repository.
+
+
+## Direct BIN/CUE inspection — verified
+The supplied disc image was parsed as MODE2/2352 and the ISO9660 filesystem was read directly.
+
+Relevant files:
+- /CRASHBSH/CRASHBSH.DAT — 73,220,096 bytes, LBA 236
+- /SCUS_945.70 — 432,128 bytes
+- /BASHY. — 31,752,000 bytes
+
+A readable preprocessed/debug header block survives near the end of CRASHBSH.DAT. This exposes substantially more of the original Arkenoid subsystem than web references alone.
+
+### Original Arkenoid functions recovered
+- AR_SetUp / AR_PreInitLevel / AR_InitLevel / AR_RestartLevel / AR_UpdateLevel
+- AR_InitHero / AR_PreMoveHero / AR_MoveHero / Ark_HeroBot
+- AR_KeepInBounds and per-variant BA/SE/NG/PI bounds handlers
+- AR_BA_BounceOnBounds / AR_SE_BounceOnBounds / AR_PI_BounceOnBounds
+- CreateBall / InitBall / PlotBall / CalcArkInfluence
+- FreeGrabbedObject / AlignGrabBall
+- Create_ArkPickup / Plot_Ark_Pickup
+- Init_ArkLaserWall / Plot_ArkLaserWall
+- Init_RepulseRing / Plot_RepulseRing
+- Init_MagnaRing / Plot_MagnaRing
+- ArkHero2ObjectCollision / ArkHeroRad2ObjectCollision
+- ArkHeroRad2ObjectRepel / ArkHeroRad2ObjectAttract
+
+### Variant evidence
+Separate handlers exist for BA, SE, NG and PI, proving that the four Ballistix-family arenas are not just cosmetic reskins. They have variant-specific bounds/out-of-bounds behavior.
+
+### Object-type evidence
+ARKENOID object IDs include Ball, AR_PU, ArkRepulse, ArkFlash, ArkDeadWall, NGDeadWall, N_Gin, SeaWeed and LaserWall.
+
+### Animation evidence
+All eight playable characters have dedicated Arkenoid animation sets for breathe, idle, taunt, move, kick, win, victory and lose.
+
+## Engineering consequence
+The temporary Unity implementation must now be treated only as scaffolding. Gameplay code should be split into a common Arkenoid core plus per-variant rule modules rather than one generic Pong ruleset. Visual hovercraft/character rigs should be independent from invisible collision volumes.
