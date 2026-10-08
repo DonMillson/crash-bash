@@ -140,13 +140,34 @@ python tools/compile_unity_references.py --dotnet /path/to/dotnet --managed /pat
 Before the local environment disconnected, the expanded simulation suite passed
 195,322 assertions; a 240-second reference-profile CPU game produced 107 goals,
 four eliminations, one round win and a five-ball peak. The final lifecycle and
-three-round additions were made after that run. GitHub Actions now compiles and
-executes the final pure simulation and ISO regressions on each push; its result
-must be inspected before treating the final revision as validated.
+three-round additions were made after that run. GitHub Actions compiled and executed the recovered final simulation revision
+`2fe67f8`: **195,317 assertions passed**, including the added three-round test,
+and all three ISO regressions passed. The smaller assertion count reflects the
+selected recorded radius rows retained during recovery; the same CPU game still
+produces 107 goals, four eliminations, one round win and a five-ball peak.
+[Inspected CI run](https://github.com/DonMillson/crash-bash/actions/runs/37815748784).
+Subsequent source revisions must pass their own CI run.
 
 The previous runtime revision compiled against 71 genuine Unity reference
 assemblies. Reference compilation has not been rerun after the final lifecycle
-changes or the in-memory recovery of the last stage.
+changes or the in-memory recovery of the last stage. A separate CI workflow now
+downloads the official pinned Linux editor archive, extracts only genuine
+UnityEngine/UnityEditor managed references into runner temporary storage and
+compiles both runtime and editor C# sources. It records archive/assembly hashes
+there without committing or uploading third-party DLLs. Its first result is
+pending; it is still C# API validation, not Unity execution.
+
+To repeat that check without an installed editor:
+
+```sh
+python tools/fetch_unity_managed_references.py --output /tmp/UnityManaged
+python tools/compile_unity_references.py --dotnet /path/to/dotnet --managed /tmp/UnityManaged --editor
+```
+
+The download link and changeset are verified against the
+[official Unity release page](https://unity.com/releases/editor/whats-new/6000.0.60f1).
+The download is the editor archive; a licensed existing Unity installation's
+managed directory can instead be passed directly to the compiler.
 
 The Unity editor itself is unavailable here. Unity import, editor assembly
 compilation, shader rendering, PlayMode and Windows executable builds have **not**

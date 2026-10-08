@@ -1,0 +1,33 @@
+name: Unity C# API compilation
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Assets/CrashBash/**/*.cs'
+      - 'Assets/CrashBash/**/*.asmdef'
+      - 'ProjectSettings/ProjectVersion.txt'
+      - 'tools/*unity*references.py'
+      - '.github/workflows/unity-reference-compile.yml'
+  pull_request:
+    paths:
+      - 'Assets/CrashBash/**/*.cs'
+      - 'Assets/CrashBash/**/*.asmdef'
+      - 'ProjectSettings/ProjectVersion.txt'
+      - 'tools/*unity*references.py'
+      - '.github/workflows/unity-reference-compile.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9
+        with:
+          dotnet-version: 8.0.x
+      - name: Fetch temporary genuine Unity references
+        run: python tools/fetch_unity_managed_references.py --output "$RUNNER_TEMP/UnityManaged"
+      - name: Compile runtime and editor C# sources against Unity APIs
+        run: python tools/compile_unity_references.py --dotnet "$(command -v dotnet)" --managed "$RUNNER_TEMP/UnityManaged" --editor
