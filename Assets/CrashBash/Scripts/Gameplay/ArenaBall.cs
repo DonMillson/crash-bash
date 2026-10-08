@@ -1,15 +1,66 @@
 using UnityEngine;
-namespace CrashBashRemake {
- [RequireComponent(typeof(Rigidbody),typeof(SphereCollider))]
- public class ArenaBall:MonoBehaviour {
-  public float launchSpeed=7f,maxSpeed=16f;
-  Rigidbody body;
-  void Awake(){body=GetComponent<Rigidbody>();body.useGravity=false;body.constraints=RigidbodyConstraints.FreezePositionY;body.collisionDetectionMode=CollisionDetectionMode.ContinuousDynamic;body.linearDamping=0f;var c=GetComponent<SphereCollider>();c.material=new PhysicMaterial("BallBounce"){bounciness=1f,dynamicFriction=0f,staticFriction=0f,bounceCombine=PhysicMaterialCombine.Maximum,frictionCombine=PhysicMaterialCombine.Minimum};}
-  void FixedUpdate(){Vector3 v=body.linearVelocity;v.y=0; if(v.sqrMagnitude<1f)v=new Vector3(1,0,1)*launchSpeed;body.linearVelocity=v.normalized*Mathf.Clamp(v.magnitude,launchSpeed*.65f,maxSpeed);}
-  public void ResetBall(){body.position=new Vector3(0,.55f,0);body.linearVelocity=Vector3.zero;Launch();}
-  public void Launch(){Vector2 d=Random.insideUnitCircle.normalized;if(d.sqrMagnitude<.1f)d=Vector2.right;body.linearVelocity=new Vector3(d.x,0,d.y)*launchSpeed;}
-  public void Freeze(bool frozen){body.linearVelocity=Vector3.zero;body.angularVelocity=Vector3.zero;body.isKinematic=frozen;}
-  public void LaunchFrom(Vector3 origin,Vector3 direction,float speed){body.isKinematic=false;body.position=origin;body.linearVelocity=direction.normalized*speed;}
-  public void Kick(Vector3 away,float multiplier){Vector3 v=body.linearVelocity;body.linearVelocity=(v.normalized+away.normalized*.65f).normalized*Mathf.Min(maxSpeed,Mathf.Max(launchSpeed,v.magnitude)*multiplier);}
- }
+
+namespace CrashBashRemake
+{
+    /// <summary>A view and invisible sensor for one shared Arkenoid ball model.</summary>
+    [RequireComponent(typeof(Rigidbody), typeof(SphereCollider))]
+    public class ArenaBall : MonoBehaviour
+    {
+        public float launchSpeed = 7, maxSpeed = 16;
+        public ArkBallModel Model { get; private set; }
+        public ArkenoidSimulation Simulation { get; private set; }
+        Rigidbody body;
+        SphereCollider shape;
+        Transform visual;
+        TrailRenderer trail;
+        bool externalFreeze;
+        void Awake()
+        {
+            body = GetComponent<Rigidbody>(); shape = GetComponent<SphereCollider>();
+            body.isKinematic = true; body.useGravity = false; shape.isTrigger = true;
+            transform.localScale = Vector3.one;
+        }
+        public void Configure(ArkenoidSimulation simulation, ArkBallModel model, Transform visualModel)
+        {
+            Simulation = simulation; Model = model; visual = visualModel;
+            launchSpeed = simulation.Tuning.launchSpeed; maxSpeed = simulation.Tuning.maxBallSpeed;
+            shape.radius = simulation.Tuning.ballRadius;
+            trail = GetComponentInChildren<TrailRenderer>();
+            if (trail) trail.Clear();
+            SyncView(0);
+        }
+        public void SyncView(float seconds)
+        {
+            if (Model == null) return;
+            body.position = ArkenoidPlayerMotor.ToWorld(Model.Position, Simulation.Tuning.ballHeight);
+            shape.enabled = Model.Active && Model.GrabOwnerSlot == -1;
+            if (visual) visual.gameObject.SetActive(Model.Active);
+            if (trail) trail.emitting = Model.Active && Model.GrabOwnerSlot == -1 && Model.Velocity.LengthSquared > 1;
+            if (visual && Model.Active && !externalFreeze)
+                visual.Rotate(new Vector3(Model.Velocity.Y, 0, -Model.Velocity.X), seconds * 110, Space.World);
+        }
+        public void Kick(Vector3 direction, float multiplier)
+            => Simulation?.KickBall(Model, ArkenoidPlayerMotor.ToPlane(direction), multiplier);
+        public void Freeze(bool frozen)
+        {
+            if (Model == null) return;
+            externalFreeze = frozen;
+            Model.GrabOwnerSlot = frozen ? -2 : -1;
+            if (frozen) Model.Velocity = new ArkVector();
+        }
+        public void LaunchFrom(Vector3 origin, Vector3 direction, float speed)
+        {
+            if (Model == null) return;
+            Model.GrabOwnerSlot = -1; Model.Active = true;
+            Model.Position = ArkenoidPlayerMotor.ToPlane(origin);
+            Model.Velocity = ArkenoidPlayerMotor.ToPlane(direction).Normalized * Mathf.Min(speed, maxSpeed);
+            SyncView(0);
+        }
+        public void Launch() { LaunchFrom(transform.position, new Vector3(1, 0, 1), launchSpeed); }
+        public void ResetBall()
+        {
+            if (Model == null) return;
+            Model.Active = false; Model.RespawnTime = Simulation.Tuning.scoredBallDelay;
+        }
+    }
 }

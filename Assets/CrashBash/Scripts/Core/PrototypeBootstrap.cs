@@ -5,6 +5,19 @@ namespace CrashBashRemake
 {
     public class PrototypeBootstrap : MonoBehaviour
     {
+        public ArkenoidVariant variant = ArkenoidVariant.BA;
+        public ArkenoidTuning ba = new ArkenoidTuning();
+        public ArkenoidTuning se = new ArkenoidTuning();
+        public ArkenoidTuning ng = new ArkenoidTuning();
+        public ArkenoidTuning pi = new ArkenoidTuning();
+        public List<PlayerSlot> players = new List<PlayerSlot> {
+            new PlayerSlot { slotId = 0, side = ArenaSide.Bottom, character = CharacterId.Crash, isHuman = true, inputIndex = 0 },
+            new PlayerSlot { slotId = 1, side = ArenaSide.Right, character = CharacterId.Tiny },
+            new PlayerSlot { slotId = 2, side = ArenaSide.Top, character = CharacterId.Dingodile },
+            new PlayerSlot { slotId = 3, side = ArenaSide.Left, character = CharacterId.Cortex },
+        };
+        ArkenoidSimulation simulation;
+        MatchManager manager;
         static readonly Color[] SideColors = {
             new Color(.10f,.45f,1f), new Color(1f,.72f,.08f),
             new Color(.18f,1f,.38f), new Color(1f,.12f,.18f)
@@ -13,7 +26,7 @@ namespace CrashBashRemake
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void AutoCreate()
         {
-            if (FindFirstObjectByType<PrototypeBootstrap>() == null)
+            if (FindFirstObjectByType<PrototypeBootstrap>() == null && FindFirstObjectByType<MatchManager>() == null)
                 new GameObject("Ballistix Prototype").AddComponent<PrototypeBootstrap>();
         }
 
@@ -23,23 +36,20 @@ namespace CrashBashRemake
             BuildCameraAndLight();
             BuildArena();
 
-            var manager = new GameObject("Match Manager").AddComponent<MatchManager>();
-            var ball = CreateBall();
-            var slots = new List<PlayerSlot> {
-                NewSlot(0,ArenaSide.Bottom,CharacterId.Crash,true),
-                NewSlot(1,ArenaSide.Right,CharacterId.Tiny,false),
-                NewSlot(2,ArenaSide.Top,CharacterId.Dingodile,false),
-                NewSlot(3,ArenaSide.Left,CharacterId.Cortex,false)
-            };
-            foreach (var slot in slots) {
-                slot.paddle = CreatePaddle(slot, ball.transform);
+            var tuning = variant == ArkenoidVariant.BA ? ba : variant == ArkenoidVariant.SE ? se : variant == ArkenoidVariant.NG ? ng : pi;
+            var setup = new List<ArkPlayerSetup>();
+            foreach (var slot in players) setup.Add(new ArkPlayerSetup(slot.slotId, slot.side, slot.character, slot.isHuman));
+            simulation = new ArkenoidSimulation(tuning, ArkenoidRulesFactory.Create(variant, tuning.startingScore), setup);
+            manager = new GameObject("Match Manager").AddComponent<MatchManager>();
+            manager.transform.SetParent(transform, false);
+            foreach (var slot in players) {
+                slot.paddle = CreatePaddle(slot, null);
+                slot.hero = slot.paddle.GetComponent<ArkenoidHeroController>();
                 CreateGoal(slot.side, manager);
             }
-            manager.Configure(slots, ball);
+            var environment = ArkenoidEnvironment.AddTo(manager.gameObject, variant);
+            manager.Configure(players, simulation, CreateBallView, environment);
         }
-
-        PlayerSlot NewSlot(int id,ArenaSide side,CharacterId c,bool human) =>
-            new PlayerSlot { slotId=id, side=side, character=c, isHuman=human, lives=5 };
 
         Material Mat(string name, Color c, float metallic=.15f, float smooth=.5f)
         {
@@ -100,46 +110,31 @@ namespace CrashBashRemake
             }
         }
 
-        ArenaBall CreateBall()
+        ArenaBall CreateBallView(ArkBallModel model)
         {
-            var g=GameObject.CreatePrimitive(PrimitiveType.Sphere); g.name="Energy Ball";
-            g.transform.position=new Vector3(0,.55f,0); g.transform.localScale=Vector3.one*.72f;
-            g.GetComponent<Renderer>().material=Mat("BallMetal",new Color(.55f,.63f,.72f),.9f,.9f);
-            var rb=g.AddComponent<Rigidbody>(); rb.mass=.8f; rb.linearDamping=0; rb.angularDamping=.05f;
-            return g.AddComponent<ArenaBall>();
+            var g = new GameObject("Ball " + model.Id);
+            g.transform.SetParent(transform, false);
+            g.AddComponent<Rigidbody>(); g.AddComponent<SphereCollider>();
+            var view = g.AddComponent<ArenaBall>();
+            var visual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            visual.name = "Ball Visual"; visual.transform.SetParent(g.transform, false);
+            visual.transform.localScale = Vector3.one * simulation.Tuning.ballRadius * 2;
+            Destroy(visual.GetComponent<Collider>());
+            visual.GetComponent<Renderer>().sharedMaterial = Mat("BallMetal", new Color(.55f,.63f,.72f), .9f,.9f);
+            view.Configure(simulation, model, visual.transform);
+            return view;
         }
 
-        ArenaPaddle CreatePaddle(PlayerSlot slot,Transform target)
+        ArenaPaddle CreatePaddle(PlayerSlot slot, Transform target)
         {
-            var g=GameObject.CreatePrimitive(PrimitiveType.Cube); g.name=$"Defender {slot.slotId} - {slot.character}";
-            bool h=slot.side==ArenaSide.Bottom||slot.side==ArenaSide.Top;
-            g.transform.position=slot.side switch {
-                ArenaSide.Bottom=>new Vector3(0,.55f,-5.45f), ArenaSide.Top=>new Vector3(0,.55f,5.45f),
-                ArenaSide.Left=>new Vector3(-5.45f,.55f,0), _=>new Vector3(5.45f,.55f,0)};
-            g.transform.localScale=h?new Vector3(1.45f,1.05f,.48f):new Vector3(.48f,1.05f,1.45f);
-            g.GetComponent<Renderer>().material=Mat("Defender_"+slot.side,SideColors[(int)slot.side],.35f,.7f);
-            // The cube is gameplay collision only; hide it and render a separate hovercraft visual.
-            var renderer = g.GetComponent<Renderer>();
-            if (renderer) renderer.enabled = false;
-
-            g.AddComponent<Rigidbody>();
-
-            var motor = g.AddComponent<ArkenoidPlayerMotor>();
-            motor.side = slot.side;
-
+            var g = new GameObject($"Defender {slot.slotId} - {slot.character}");
+            g.transform.SetParent(transform, false);
             var hero = g.AddComponent<ArkenoidHeroController>();
-            hero.human = slot.isHuman;
-            hero.ballTarget = target;
-
+            hero.human = slot.isHuman; hero.inputIndex = slot.inputIndex;
             ArkenoidCraftVisual.Build(g.transform, slot.side, SideColors[(int)slot.side]);
-
-            // Compatibility adapter for the current match manager; remove after full Arkenoid migration.
-            var p=g.AddComponent<ArenaPaddle>();
-            p.side=slot.side;
-            p.isHuman=false;
-            p.enabled=false;
-            p.ballTarget=target;
-            return p;
+            var adapter = g.AddComponent<ArenaPaddle>();
+            adapter.side = slot.side; adapter.isHuman = slot.isHuman;
+            return adapter;
         }
 
         void CreateGoal(ArenaSide side,MatchManager manager)

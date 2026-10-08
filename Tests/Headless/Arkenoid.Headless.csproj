@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <LangVersion>9.0</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Assets/CrashBash/Scripts/Simulation/*.cs" />
+    <Compile Include="../../Assets/CrashBash/Scripts/Core/PlayerIdentity.cs" />
+    <Compile Include="../../Assets/CrashBash/Scripts/Gameplay/ArkenoidHeroState.cs" />
+    <Compile Include="../../Assets/CrashBash/Scripts/Gameplay/ArkenoidVariant.cs" />
+    <Compile Include="Program.cs" />
+  </ItemGroup>
+</Project>

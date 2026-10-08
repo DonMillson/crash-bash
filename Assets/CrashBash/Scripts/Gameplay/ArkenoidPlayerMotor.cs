@@ -1,34 +1,52 @@
 using UnityEngine;
+
 namespace CrashBashRemake
 {
-    [RequireComponent(typeof(Rigidbody), typeof(Collider))]
+    /// <summary>Invisible gameplay body; the simulation owns movement bounds.</summary>
+    [RequireComponent(typeof(Rigidbody), typeof(BoxCollider))]
     public sealed class ArkenoidPlayerMotor : MonoBehaviour
     {
         public ArenaSide side;
-        public float moveSpeed = 7.5f;
-        public float boostMultiplier = 1.5f;
-        public float extent = 2.15f;
         Rigidbody body;
-        Vector3 home;
+        BoxCollider shape;
+        ArkenoidSimulation simulation;
+        ArkHeroModel model;
+        public ArkHeroModel Model => model;
+        public float LateralVelocity => model == null ? 0 : model.Velocity;
+        public Vector3 Facing => ToWorld(ArkenoidArenaGeometry.Inward(side), 0);
+        public static Vector3 ToWorld(ArkVector v, float height) => new Vector3(v.X, height, v.Y);
+        public static ArkVector ToPlane(Vector3 v) => new ArkVector(v.x, v.z);
 
         void Awake()
         {
-            body = GetComponent<Rigidbody>();
-            body.isKinematic = true;
-            home = body.position;
+            body = GetComponent<Rigidbody>(); shape = GetComponent<BoxCollider>();
+            body.isKinematic = true; body.useGravity = false;
+            shape.isTrigger = true;
+            // Root scale is always one: visual proportions cannot affect collision dimensions.
+            transform.localScale = Vector3.one;
         }
-
+        public void Configure(ArkenoidSimulation sim, ArkHeroModel hero)
+        {
+            simulation = sim; model = hero; side = hero.Side;
+            var t = sim.Tuning;
+            bool horizontal = side == ArenaSide.Bottom || side == ArenaSide.Top;
+            shape.size = horizontal ? new Vector3(t.defenderHalfWidth * 2, 1.05f, t.defenderHalfDepth * 2)
+                : new Vector3(t.defenderHalfDepth * 2, 1.05f, t.defenderHalfWidth * 2);
+            body.position = ToWorld(sim.Geometry.HeroPosition(side, hero.Lateral), t.ballHeight);
+        }
+        public void SyncView()
+        {
+            if (model == null) return;
+            shape.enabled = !model.IsEliminated;
+            Vector3 position = ToWorld(simulation.Geometry.HeroPosition(side, model.Lateral), simulation.Tuning.ballHeight);
+            body.position = position;
+        }
+        // Compatibility entry points forward into the authoritative model; no second movement loop.
         public void Move(float axis, bool boost)
         {
-            Vector3 p = body.position;
-            float delta = axis * moveSpeed * (boost ? boostMultiplier : 1f) * Time.fixedDeltaTime;
-            if (side == ArenaSide.Bottom || side == ArenaSide.Top)
-                p.x = Mathf.Clamp(p.x + delta, -extent, extent);
-            else
-                p.z = Mathf.Clamp(p.z + delta, -extent, extent);
-            body.MovePosition(p);
+            if (model == null) return;
+            simulation.SetInput(model.SlotId, new ArkInput { Axis = axis, Boost = boost });
         }
-
-        public void ResetMotor() => body.position = home;
+        public void ResetMotor() { SyncView(); }
     }
 }

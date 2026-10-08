@@ -4,54 +4,38 @@ namespace CrashBashRemake
 {
     public abstract class ArkenoidEnvironment : MonoBehaviour
     {
+        protected ArkenoidSimulation Simulation;
         public abstract ArkenoidVariant Variant { get; }
-        public virtual void Build() { }
-        public virtual void TickEnvironment() { }
-        protected virtual void Update() => TickEnvironment();
-
-        protected GameObject MakeTrigger(string name, Vector3 position, Vector3 scale)
+        public string BoundsHandler => Simulation == null ? "" : Simulation.Rules.BoundsEntryPoint;
+        public string OutOfBoundsHandler => Simulation == null ? "" : Simulation.Rules.OutOfBoundsEntryPoint;
+        public string LaunchHandler => Simulation == null ? "" : Simulation.Rules.LaunchEntryPoint;
+        public void Configure(ArkenoidSimulation simulation)
         {
-            var go = new GameObject(name);
-            go.transform.position = position;
-            var box = go.AddComponent<BoxCollider>();
-            box.isTrigger = true;
-            box.size = scale;
-            return go;
+            if (simulation.Rules.Variant != Variant) throw new System.ArgumentException("Environment/rules variant mismatch.");
+            Simulation = simulation;
+        }
+        public virtual void Build() { ValidateLaunchers(); }
+        public virtual void Restart() { ValidateLaunchers(); }
+        public virtual void TickEnvironment(float seconds) { }
+        protected void ValidateLaunchers()
+        {
+            for (int corner = 0; corner < 4; corner++)
+                if (!Simulation.Rules.TestLaunchBounds(Simulation.Rules.LaunchPosition(corner, Simulation.Geometry), Simulation.Geometry))
+                    Debug.LogError(Variant + " launch position is outside its selected calibration profile.");
+        }
+        public static ArkenoidEnvironment AddTo(GameObject root, ArkenoidVariant variant)
+        {
+            switch (variant)
+            {
+                case ArkenoidVariant.BA: return root.AddComponent<BAEnvironment>();
+                case ArkenoidVariant.SE: return root.AddComponent<SEEnvironment>();
+                case ArkenoidVariant.NG: return root.AddComponent<NGEnvironment>();
+                default: return root.AddComponent<PIEnvironment>();
+            }
         }
     }
-
-    // Original PS1 header exposes separate BA/SE/NG/PI bounds handlers.
-    // These modules are intentionally separate even before every numeric constant is decoded.
-    public sealed class BAEnvironment : ArkenoidEnvironment
-    {
-        public override ArkenoidVariant Variant => ArkenoidVariant.BA;
-    }
-
-    public sealed class SEEnvironment : ArkenoidEnvironment
-    {
-        public override ArkenoidVariant Variant => ArkenoidVariant.SE;
-        public override void Build()
-        {
-            // Seaweed is a real object family in the PS1 Arkenoid subsystem.
-            // Visual/physics values stay disabled until decoded rather than invented.
-        }
-    }
-
-    public sealed class NGEnvironment : ArkenoidEnvironment
-    {
-        public override ArkenoidVariant Variant => ArkenoidVariant.NG;
-        public override void Build()
-        {
-            // Reserved for N.Gin and NGDeadWall behavior recovered from the original subsystem.
-        }
-    }
-
-    public sealed class PIEnvironment : ArkenoidEnvironment
-    {
-        public override ArkenoidVariant Variant => ArkenoidVariant.PI;
-        public override void Build()
-        {
-            // Reserved for PI-specific launch bounds and laser-wall behavior.
-        }
-    }
+    public sealed class BAEnvironment : ArkenoidEnvironment { public override ArkenoidVariant Variant => ArkenoidVariant.BA; }
+    public sealed class SEEnvironment : ArkenoidEnvironment { public override ArkenoidVariant Variant => ArkenoidVariant.SE; }
+    public sealed class NGEnvironment : ArkenoidEnvironment { public override ArkenoidVariant Variant => ArkenoidVariant.NG; }
+    public sealed class PIEnvironment : ArkenoidEnvironment { public override ArkenoidVariant Variant => ArkenoidVariant.PI; }
 }

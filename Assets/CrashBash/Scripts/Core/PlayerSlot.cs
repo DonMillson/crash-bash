@@ -1,11 +1,7 @@
 using System;
-using UnityEngine;
 
 namespace CrashBashRemake
 {
-    public enum ArenaSide { Bottom, Right, Top, Left }
-    public enum CharacterId { Crash, Coco, Cortex, NBrio, Tiny, Dingodile, KoalaKong, RillaRoo }
-
     [Serializable]
     public class PlayerSlot
     {
@@ -13,7 +9,9 @@ namespace CrashBashRemake
         public ArenaSide side;
         public CharacterId character;
         public bool isHuman;
+        public int inputIndex;
+        [NonSerialized] public ArkenoidHeroController hero;
         [NonSerialized] public ArenaPaddle paddle;
-        public int lives = 5;
+        public int lives = 15;
     }
 }
