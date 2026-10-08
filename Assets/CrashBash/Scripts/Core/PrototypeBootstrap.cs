@@ -118,8 +118,28 @@ namespace CrashBashRemake
                 ArenaSide.Left=>new Vector3(-5.45f,.55f,0), _=>new Vector3(5.45f,.55f,0)};
             g.transform.localScale=h?new Vector3(1.45f,1.05f,.48f):new Vector3(.48f,1.05f,1.45f);
             g.GetComponent<Renderer>().material=Mat("Defender_"+slot.side,SideColors[(int)slot.side],.35f,.7f);
+            // The cube is gameplay collision only; hide it and render a separate hovercraft visual.
+            var renderer = g.GetComponent<Renderer>();
+            if (renderer) renderer.enabled = false;
+
             g.AddComponent<Rigidbody>();
-            var p=g.AddComponent<ArenaPaddle>(); p.side=slot.side;p.isHuman=slot.isHuman;p.ballTarget=target;return p;
+
+            var motor = g.AddComponent<ArkenoidPlayerMotor>();
+            motor.side = slot.side;
+
+            var hero = g.AddComponent<ArkenoidHeroController>();
+            hero.human = slot.isHuman;
+            hero.ballTarget = target;
+
+            ArkenoidCraftVisual.Build(g.transform, slot.side, SideColors[(int)slot.side]);
+
+            // Compatibility adapter for the current match manager; remove after full Arkenoid migration.
+            var p=g.AddComponent<ArenaPaddle>();
+            p.side=slot.side;
+            p.isHuman=false;
+            p.enabled=false;
+            p.ballTarget=target;
+            return p;
         }
 
         void CreateGoal(ArenaSide side,MatchManager manager)
