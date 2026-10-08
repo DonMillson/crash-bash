@@ -98,3 +98,57 @@ All eight playable characters have dedicated Arkenoid animation sets for breathe
 
 ## Engineering consequence
 The temporary Unity implementation must now be treated only as scaffolding. Gameplay code should be split into a common Arkenoid core plus per-variant rule modules rather than one generic Pong ruleset. Visual hovercraft/character rigs should be independent from invisible collision volumes.
+
+
+## Raw symbol pass from the supplied CRASHBSH.DAT
+
+The read-only extractor now confirms these original functions directly in the data archive:
+
+```
+AR_SetUp
+AR_PreInitLevel
+AR_InitLevel
+AR_RestartLevel
+AR_UpdateLevel
+AR_InitHero
+AR_PreMoveHero
+AR_MoveHero
+Ark_HeroBot
+DangerBalls
+AR_KeepInBounds
+AR_PI_KeepInBounds
+AR_BA_BounceOnBounds
+AR_SE_BounceOnBounds
+AR_PI_BounceOnBounds
+AR_BA_TestOutOfBounds
+AR_SE_TestOutOfBounds
+AR_NG_TestOutOfBounds
+AR_PI_TestOutOfBounds
+AR_BA_TestLaunchBounds
+AR_PI_TestLaunchBounds
+CreateBall
+InitBall
+PlotBall
+CalcArkInfluence
+FreeGrabbedObject
+AlignGrabBall
+Init_ArkDeadWall
+Init_NGArkDeadWall
+SetCornerFailure
+HandleCornerFailure
+GetArkContour
+GetArkPIContour
+Create_ArkPickup
+Init_ArkLaserWall
+Init_RepulseRing
+Init_MagnaRing
+ArkHero2ObjectCollision
+ArkHeroRad2ObjectCollision
+ArkHeroRad2ObjectRepel
+ArkHeroRad2ObjectAttract
+```
+
+This confirms that BA/SE/NG/PI have distinct boundary and out-of-bounds paths in the original engine. Until their exact mapping is proven from the disc, the remake code must preserve these internal variant IDs instead of guessing descriptive names.
+
+### Immediate implementation rule
+Do not hard-code one generic rectangular arena. Build an Arkenoid base controller with pluggable boundary, launch, scoring and special-object behavior for BA, SE, NG and PI. Rendering remains separate from collision/gameplay geometry.
