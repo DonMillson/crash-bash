@@ -34,9 +34,13 @@ python tools/compile_unity_references.py --dotnet /path/to/dotnet --managed /pat
 python tools/analyze_arkenoid.py '/private/Crash Bash.bin' --cue '/private/Crash Bash.cue' --output Docs/PS1_Arkenoid_Evidence.json
 ```
 
-**C# simulation and ISO regressions run in GitHub Actions. A previous runtime
-revision compiled against genuine Unity 6 references. Unity editor import,
-shader rendering, EditMode tests and a Windows executable build have not been
-run in this session.** See the implementation notes for the scope of each check.
+**Verified in CI: 195,332 simulation assertions, three ISO regressions, all 30
+runtime C# files against genuine Unity 6 APIs, and the editor C# assembly.**
+[Simulation run](https://github.com/DonMillson/crash-bash/actions/runs/37818894813) ·
+[Unity API compilation](https://github.com/DonMillson/crash-bash/actions/runs/37818894841).
+
+**Unity project import, shader rendering, EditMode/PlayMode execution and a
+Windows executable build have not been run in this session.**
+See the implementation notes for the scope of each check.
 Use **CrashBash → Build Windows player** in a licensed Unity installation, or
 `Unity -batchmode -quit -projectPath <this-repo> -executeMethod CrashBashRemake.Editor.ArkenoidBuildTools.BuildWindows -logFile build.log`.

@@ -19,6 +19,7 @@ button edges until consumption and interpolating only the replaceable visuals.
 - Lose -> Die -> Dead progression; eliminated players stop moving and their goal
   becomes a reflecting wall immediately. Countdown, round result, three-win
   match result, and explicit restart. Match wins no longer disappear automatically.
+  Immediate dead-wall activation is a provisional timing choice pending a PS1 death trace.
 - Bot threat selection scans all balls. Prediction/reaction is a temporary
   heuristic, not a claim to have recovered `Ark_HeroBot` or `DangerBalls` bodies.
 - Hold-to-attract, aligned grabbed ball and release-to-fire are functional in
@@ -82,8 +83,10 @@ independent provisional profiles. The first observed corner launcher is at
 samples are reproduced by the 30Hz model: initial upward speed 48 units/tick,
 gravity 6 units/tick squared, resting centre height 96 and rebound ratio .5.
 Horizontal current speed starts at 32 and ramps by 4 towards cruise target 80.
-After the launch ramp, the original trajectory changes direction; the remake's
-final horizontal aim/RNG is still provisional and is not an exact trace match.
+After the launch ramp, the original trajectory changes direction. The remake's
+horizontal aim/RNG throughout the launch is still provisional; only height and
+speed behavior are calibrated, not the full XYZ trajectory. The remaining three
+launch corners currently mirror the one measured position provisionally.
 Height is separate from the 2D rules and interpolated only by the ball view.
 
 Controlled incoming-ball probes distinguish current speed from cruise target.
@@ -145,30 +148,26 @@ checks API signatures and dependencies without fake Unity API stubs:
 python tools/compile_unity_references.py --dotnet /path/to/dotnet --managed /path/to/Unity/Editor/Data/Managed
 ```
 
-Before the local environment disconnected, the expanded simulation suite passed
-195,322 assertions; a 240-second reference-profile CPU game produced 107 goals,
-four eliminations, one round win and a five-ball peak. The final lifecycle and
-three-round additions were made after that run. GitHub Actions compiled and executed the recovered final simulation revision
-`2fe67f8`: **195,317 assertions passed**, including the added three-round test,
-and all three ISO regressions passed. The smaller assertion count reflects the
-selected recorded radius rows retained during recovery; the same CPU game still
-produces 107 goals, four eliminations, one round win and a five-ball peak.
-[Inspected CI run](https://github.com/DonMillson/crash-bash/actions/runs/37815748784).
-Subsequent source revisions must pass their own CI run.
+The final source revision `0a49da3` was checked by two inspected CI runs:
 
-The previous runtime revision compiled against 71 genuine Unity reference
-assemblies. Reference compilation has not been rerun after the final lifecycle
-changes or the in-memory recovery of the last stage. A separate CI workflow now
-downloads the official pinned Linux editor archive, extracts only genuine
-UnityEngine/UnityEditor managed references into runner temporary storage and
-compiles both runtime and editor C# sources. It records archive/assembly hashes
-there without committing or uploading third-party DLLs. The first full-archive run exposed a verifier reference-selection problem:
-monolithic facades duplicated types in the modular Unity APIs (CS0433). The
-verifier now excludes those facades, and another run is pending. The archive is
-downloaded in eight validated HTTP ranges when the CDN supports it. This remains
-C# API validation, not Unity execution.
+- [Arkenoid simulation](https://github.com/DonMillson/crash-bash/actions/runs/37818894813):
+  **195,332 assertions passed**, with the measured motion/ball/kick fixtures,
+  exact -1200/+1201 bound checks, all ten hero states and the three-round match.
+  All three ISO traversal regressions passed.
+- [Unity C# API compilation](https://github.com/DonMillson/crash-bash/actions/runs/37818894841):
+  **all 30 runtime C# files compiled against 73 genuine UnityEngine assemblies**,
+  and the editor C# assembly compiled against genuine UnityEditor references.
+  No synthetic Unity API substitutes were used.
+- The 240-second reference-profile CPU game again produced **107 goals,
+  four eliminations, one round win and a five-ball peak**.
 
-To repeat that check without an installed editor:
+The reference workflow downloads the pinned official Linux editor archive in
+validated HTTP ranges and extracts managed DLLs only into runner temporary
+storage. It records archive/assembly hashes there; no third-party DLL is committed
+or uploaded as an artifact. Modular API selection excludes the legacy monolithic
+reference facades that otherwise cause duplicate type definitions.
+
+To repeat API compilation without an installed editor:
 
 ```sh
 python tools/fetch_unity_managed_references.py --output /tmp/UnityManaged
@@ -177,13 +176,14 @@ python tools/compile_unity_references.py --dotnet /path/to/dotnet --managed /tmp
 
 The download link and changeset are verified against the
 [official Unity release page](https://unity.com/releases/editor/whats-new/6000.0.60f1).
-The download is the editor archive; a licensed existing Unity installation's
-managed directory can instead be passed directly to the compiler.
+An existing Unity installation's managed directory can instead be passed directly.
 
-The Unity editor itself is unavailable here. Unity import, editor assembly
-compilation, shader rendering, PlayMode and Windows executable builds have **not**
-been run. C# reference compilation is not represented as a Unity build. Full editor verification is
-still required before calling the vertical slice PS1-accurate or release-ready.
+The Unity editor itself could not be run in this session; the local environment
+later disconnected and the final changes were recovered and committed through
+GitHub. Unity project import/assembly reload, shader rendering, EditMode/PlayMode
+execution and Windows executable builds have **not** been run.
+Reference compilation is **not** a Unity build or visual/playtesting approval.
+The latest documentation-only commit does not alter the validated C# sources.
 
 ## Vehicle, arena and animation integration
 
@@ -221,3 +221,16 @@ Unity EditMode integration tests and Windows build menu/CLI entry points are
 included. They remain **unexecuted** until the Unity editor is available. The
 Windows builder creates a scene in the existing project, retains runtime shaders,
 and checks the real BuildReport before reporting success.
+
+## Next reference and editor work
+
+1. Measure scoring flags, actual goal aperture/collision contour and dead-wall
+   activation timing before calling Crashball mechanics 1:1. Failed goal teleports
+   and the unresolved passive speed reset must remain visible in the evidence.
+2. Measure the other seven characters' movement, kick influence and button
+   hold/repeat/cooldown behavior; replace only the corresponding provisional fields.
+3. Establish BA/SE/NG/PI resource/overlay mapping and original bounds/launch handlers
+   before assigning SeaWeed, N_Gin, Flash or LaserWall gameplay to a variant.
+4. Import and play the existing Unity project, run its EditMode/PlayMode checks,
+   inspect arena/craft lighting and poses, then build Windows with the real BuildReport.
+   Match animation timing and craft silhouette against the private PS1 reference.
