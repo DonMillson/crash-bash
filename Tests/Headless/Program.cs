@@ -169,10 +169,69 @@ static class Program
         Check(goals > 20 && eliminations > 0 && rounds > 0 && peak > 1, "reference bot game did not exercise scoring, elimination and multiple balls");
         Console.WriteLine($"Reference bot game: {goals} goals, {eliminations} eliminations, {rounds} round wins, peak {peak} balls in 240 simulated seconds.");
     }
+    static void ActionAndEliminationStates()
+    {
+        var sim = Start();
+        Check(sim.Hero(2).State == ArkenoidHeroState.Idle, "resting defender never reached Idle");
+        sim.SetInput(2, new ArkInput { Axis = 1 }); sim.Step(.04f);
+        Check(sim.Hero(2).State == ArkenoidHeroState.Move, "input did not enter Move");
+        sim.SetInput(2, new ArkInput { KickPressed = true }); sim.Step(.04f);
+        Check(sim.Hero(2).State == ArkenoidHeroState.Kick, "kick did not enter Kick");
+
+        sim = Start();
+        sim.SetInput(2, new ArkInput { TauntPressed = true }); sim.Step(.04f);
+        Check(sim.Hero(2).State == ArkenoidHeroState.Taunt, "taunt input did not reach Taunt");
+        sim.SetInput(2, new ArkInput { Axis = 1 }); Step(sim, 10);
+        Check(sim.Hero(2).State == ArkenoidHeroState.Taunt && sim.Hero(2).Lateral == 0,
+            "taunting defender accepted movement");
+        Step(sim, 45);
+        Check(sim.Hero(2).State == ArkenoidHeroState.Move && sim.Hero(2).Lateral > 0,
+            "taunt never returned to movement");
+
+        // Positive-path coverage for opt-in provisional pickup/RedKick binding.
+        // This verifies functionality; it does not establish original variant ownership.
+        sim = Start(new ArkenoidTuning { allowCornerPickupsForCalibration = true });
+        sim.SetInput(2, new ArkInput { Axis = 1 }); Step(sim, 70);
+        Check(sim.Hero(2).RepulseCharges == 1, "calibration corner pickup did not grant a charge");
+        ArkVector inward = ArkenoidArenaGeometry.Inward(sim.Hero(2).Side);
+        var repelled = sim.AddBall(sim.Geometry.HeroPosition(sim.Hero(2).Side, sim.Hero(2).Lateral) + inward * .9f, -inward * 2);
+        sim.SetInput(2, new ArkInput { RepulsePressed = true }); sim.Step(.04f);
+        Check(sim.Hero(2).State == ArkenoidHeroState.RedKick && sim.Hero(2).RepulseCharges == 0,
+            "earned repulse did not enter RedKick or consume one charge");
+        Check(repelled.LastTouchSlot == 2 && ArkVector.Dot(repelled.Velocity, inward) > 0,
+            "charged repulse did not affect the incoming ball");
+        int events = 0; foreach (ArkEvent ev in sim.Events) if (ev.Kind == ArkEventKind.Repulse && ev.SlotId == 2) events++;
+        Check(events == 1, "repulse emitted more than one action event");
+
+        sim = Start(new ArkenoidTuning { allowAttractForCalibration = true, startingScore = 1 });
+        sim.Balls[0].Active = false; sim.Balls[0].RespawnTime = 100;
+        var held = sim.AddBall(new ArkVector(0, -4.5f), new ArkVector(0, -.1f));
+        sim.SetInput(2, new ArkInput { AttractHeld = true }); sim.Step(.04f);
+        Check(sim.Hero(2).State == ArkenoidHeroState.Grab && held.GrabOwnerSlot == 2,
+            "capture did not enter Grab");
+        var fatal = sim.AddBall(new ArkVector(0, -sim.Tuning.goalPlane), new ArkVector(0, -7));
+        sim.TryScore(ArenaSide.Bottom, fatal);
+        Check(sim.Hero(2).State == ArkenoidHeroState.Lose && held.GrabOwnerSlot == -1 && sim.Hero(2).GrabbedBallId == -1,
+            "elimination did not enter Lose or free a held ball");
+        sim.Step(.24f);
+        Check(sim.Hero(2).State == ArkenoidHeroState.Die, "Lose never advanced to Die");
+        Step(sim, 40);
+        Check(sim.Hero(2).State == ArkenoidHeroState.Dead && held.GrabOwnerSlot == -1,
+            "Die never advanced to Dead or left stale ball ownership");
+
+        sim = Start(new ArkenoidTuning { startingScore = 1, winsNeeded = 1 });
+        foreach (ArenaSide side in new[] { ArenaSide.Bottom, ArenaSide.Right, ArenaSide.Top })
+        {
+            var ball = sim.AddBall(sim.Geometry.SidePoint(side, 0, sim.Tuning.goalPlane), -ArkenoidArenaGeometry.Inward(side) * 8);
+            sim.TryScore(side, ball);
+        }
+        Check(sim.Hero(1).State == ArkenoidHeroState.Winner, "round winner never reached Winner");
+    }
     static void Main(string[] args)
     {
         MeasuredMotion();
         MeasuredBalls();
+        ActionAndEliminationStates();
         foreach (ArkCraftPart part in ArkenoidCraftRecipe.Create())
         {
             double volume = 0;
@@ -270,6 +329,6 @@ static class Program
                 Check(sim.Balls.Count <= 5, "ball population exceeded cap");
             }
         }
-        Console.WriteLine($"PASS: {assertions} assertions; measured PS1 Dingodile motion/ball/wave traces, three-round match, 30Hz input/clock, identity, goals, death walls, reset, swept contacts, grab, four variant dispatches, seeded bot soak.");
+        Console.WriteLine($"PASS: {assertions} assertions; measured PS1 Dingodile motion/ball/wave traces, all ten hero states, three-round match, 30Hz input/clock, identity, goals, death walls, reset, swept contacts, grab, four variant dispatches, seeded bot soak.");
     }
 }

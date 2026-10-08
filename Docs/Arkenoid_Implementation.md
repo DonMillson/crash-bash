@@ -126,7 +126,11 @@ sub-tick input edges, update-rate independence, permuted identities, bounded tra
 non-scoring balls, dead-wall rebound, elimination, persistent match result,
 three-round win accumulation, restart, fast/moving swept contacts, gated repulse,
 hold/release, 31 launch-height samples, six kick speed probes, coarse/fine kick
-reach probes, wave/corner containment and seeded bot soaks for all four dispatches. These are real C# simulation tests, not
+reach probes, wave/corner containment and seeded bot soaks for all four dispatches.
+Additional functional regressions now exercise all ten hero states, taunt movement
+lock/resume, earned repulse charge consumption and grabbed-ball cleanup on elimination.
+Those regressions check the provisional action bindings; they do not confirm PS1
+RedKick semantics, animation timings or pickup ownership. These are real C# simulation tests, not
 Python replicas or Unity API stubs.
 
 All runtime C# files also compile using Roslyn against genuine UnityEngine
